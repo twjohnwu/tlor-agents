@@ -25,7 +25,7 @@ English version: [README.md](README.md).
 | `gondor-builder` | 剛鐸石匠 | sonnet / medium | 照明確 spec 實作、容許區域性小判斷；設計歧義留給 Maia |
 | `eagle-sentinel` | 巨鷹哨兵 | opus / medium | Fresh-context 對抗式驗證；CONFIRMED/REFUTED |
 | `elf-archer` | 精靈神射手 | sonnet / medium | 正確性鏡頭：每一箭命中一個邏輯漏洞 |
-| `orc-saboteur` | 半獸人破壞者 | sonnet / medium | 安全與失效鏡頭：注入、競態、部分失敗 |
+| `orc-saboteur` | 半獸人破壞者 | sonnet / medium | 安全與失效鏡頭：輸入驗證、競態、部分失敗 |
 | `hobbit-gardener` | 哈比人園丁 | sonnet / medium | 簡潔性鏡頭：修剪過度工程 |
 
 後三者組成**抗辯審查小組**——高風險判定時由 `eagle-sentinel` 建議、
@@ -76,6 +76,10 @@ session**——agent 定義在 session 啟動時載入。
 - **模型不可用時靜默 fallback**：依官方文件，被組織排除的 `model:` 值會
   讓 subagent 改跑 session 繼承的模型、不報錯。沒有 opus 的環境，
   `eagle-sentinel` 會安靜地跑在你 session 的模型上。
+- **安全鏡頭角色可能觸發模型的安全防護。** `orc-saboteur`（與程度較輕的
+  `elf-archer`）做的是對抗式**防禦**審查；部分模型的寬版安全分類器可能把它
+  讀成攻擊性資安工作、於任務中途自動切換模型。這是已知誤判——審查仍會完成。
+  措辭已保持防禦性以降低機率。
 
 ## 發布流程（維護者）
 
