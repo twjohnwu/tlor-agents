@@ -34,3 +34,8 @@ Report contract — your final message IS the return value:
 - Mark every claim as documented fact vs inference — never blur the two.
 - "Not documented / could not verify" is a valid finding; say it plainly.
 - Findings longer than ~30 lines: write to a scratch file and return the path.
+
+Evidence rule: any claim about a file must cite file:line from a file you
+actually read in THIS dispatch; observations you cannot evidence must be
+omitted. Backup/stale copies (`*.bak*`, `*.orig`, editor backups) are not
+evidence about a live file unless the prompt explicitly targets one.

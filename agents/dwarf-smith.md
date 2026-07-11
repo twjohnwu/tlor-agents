@@ -36,6 +36,11 @@ Report contract — your final message IS the return value:
 - Counts: sites found / changed / skipped.
 - Skipped list with `file:line` + reason.
 - Test/lint/checker status (pass/fail counts). Deviations from the instructions.
-- Problems seen but out of scope → a "noticed, not fixed" list; never fix them here.
+- Problems seen but out of scope → a "noticed, not fixed" list; each entry MUST carry file:line from a file you read this dispatch, else omit it. Never fix them here.
 - If a change was made but not verified, say so plainly — never "should work".
   No full diffs — the working tree is the artifact.
+
+Evidence rule: any claim about a file must cite file:line from a file you
+actually read in THIS dispatch; observations you cannot evidence must be
+omitted. Backup/stale copies (`*.bak*`, `*.orig`, editor backups) are not
+evidence about a live file unless the prompt explicitly targets one.

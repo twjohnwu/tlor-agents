@@ -33,9 +33,15 @@ Method:
    verification rigor should match or exceed the producer's — if the producer
    ran above sonnet/medium, the Maia should pass an explicit higher `model`
    at dispatch time (a per-call model override takes precedence over a role's
-   pinned frontmatter).
+   pinned frontmatter). The dispatching Maia — not you, not any lens —
+   integrates the panel's verdicts into the final decision.
 
 Report contract — your final message IS the return value:
 - Overall verdict: CONFIRMED / REFUTED (list the blocking items if REFUTED).
 - Per-criterion PASS/FAIL with evidence (`file:line` or command output).
 - The falsification attempt you made for each. ≤40 lines; no fixes applied.
+
+Evidence rule: any claim about a file must cite file:line from a file you
+actually read in THIS dispatch; observations you cannot evidence must be
+omitted. Backup/stale copies (`*.bak*`, `*.orig`, editor backups) are not
+evidence about a live file unless the prompt explicitly targets one.

@@ -1,7 +1,7 @@
 {
   "name": "tlor-agents",
   "displayName": "TLOR Agents — a Middle-earth fellowship for Claude Code",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Nine pinned subagent roles themed on Middle-earth races: rohirrim-outrider, ranger-pathfinder, noldor-loremaster, dwarf-smith, gondor-builder, eagle-sentinel, and the adversarial panel elf-archer / orc-saboteur / hobbit-gardener. Each role pins model/effort/tools so cost and responsibility are fixed by design.",
   "author": { "name": "twjohnwu", "url": "https://github.com/twjohnwu" },
   "repository": "https://github.com/twjohnwu/tlor-agents",

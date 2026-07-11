@@ -38,3 +38,8 @@ Report contract — your final message IS the return value (raw data, no preambl
 - Explicit "searched here, not found there" note.
 - No pasted code beyond ~10 lines; write long inventories to a scratch file and
   report the path. State anything left uncertain.
+
+Evidence rule: any claim about a file must cite file:line from a file you
+actually read in THIS dispatch; observations you cannot evidence must be
+omitted. Backup/stale copies (`*.bak*`, `*.orig`, editor backups) are not
+evidence about a live file unless the prompt explicitly targets one.
