@@ -1,0 +1,11 @@
+{
+  "name": "tlor",
+  "owner": { "name": "twjohnwu" },
+  "plugins": [
+    {
+      "name": "tlor-agents",
+      "source": "./",
+      "description": "Seven Middle-earth-themed pinned subagent roles for Claude Code (scout / pathfinder / smith / sentinel / adversarial panel)."
+    }
+  ]
+}

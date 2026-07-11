@@ -1,0 +1,10 @@
+{
+  "name": "tlor-agents",
+  "displayName": "TLOR Agents — a Middle-earth fellowship for Claude Code",
+  "version": "1.0.0",
+  "description": "Seven pinned subagent roles themed on Middle-earth races: scouts, sweepers, smiths, sentinels, and an adversarial review panel. Each role pins model/effort/tools so cost and responsibility are fixed by design.",
+  "author": { "name": "twjohnwu", "url": "https://github.com/twjohnwu" },
+  "repository": "https://github.com/twjohnwu/tlor-agents",
+  "license": "MIT",
+  "keywords": ["agents", "subagents", "lotr", "roles", "dispatch", "adversarial-review"]
+}
