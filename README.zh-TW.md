@@ -1,6 +1,6 @@
 # TLOR Agents — 給 Claude Code 的中土遠征隊
 
-七個固定職責的 subagent 角色，以魔戒中土種族為主題。每個角色的
+九個固定職責的 subagent 角色，以魔戒中土種族為主題。每個角色的
 **model／effort／tools 都寫死在 frontmatter**——成本與權責由設計決定，
 不是隨 orchestrator 的環境浮動。
 
@@ -20,14 +20,17 @@ English version: [README.md](README.md).
 |---|---|---|---|
 | `rohirrim-outrider` | 洛汗外圍騎哨 | haiku / low | 快速定點查找：「X 在哪／Y 怎麼運作」 |
 | `ranger-pathfinder` | 北方遊俠 | sonnet / low | 漏掉代價高時的廣域唯讀掃查 |
+| `noldor-loremaster` | 諾多精靈博學者 | sonnet / medium | web/文件研究：附來源與版本、事實與推論分明 |
 | `dwarf-smith` | 矮人鍛造師 | sonnet / low | 規格完全明確的機械工作；絕不即興 |
+| `gondor-builder` | 剛鐸石匠 | sonnet / medium | 照明確 spec 實作、容許區域性小判斷；設計歧義留給 Maia |
 | `eagle-sentinel` | 巨鷹哨兵 | opus / medium | Fresh-context 對抗式驗證；CONFIRMED/REFUTED |
 | `elf-archer` | 精靈神射手 | sonnet / medium | 正確性鏡頭：每一箭命中一個邏輯漏洞 |
 | `orc-saboteur` | 半獸人破壞者 | sonnet / medium | 安全與失效鏡頭：注入、競態、部分失敗 |
 | `hobbit-gardener` | 哈比人園丁 | sonnet / medium | 簡潔性鏡頭：修剪過度工程 |
 
-後三者組成**抗辯審查小組**——`eagle-sentinel` 遇到高風險判定時召集
-（≥3 個獨立鏡頭＋一位裁判）。
+後三者組成**抗辯審查小組**——高風險判定時由 `eagle-sentinel` 建議、
+**Maia 召集**（≥3 個獨立鏡頭＋一位裁判）。要匹配更強 producer 的嚴謹度，
+派遣鏡頭時明示更高的 `model` 參數——派遣時的覆寫優先於角色的 frontmatter pin。
 
 ## 安裝
 
@@ -47,7 +50,8 @@ git clone https://github.com/twjohnwu/tlor-agents.git
 cd tlor-agents && ./install.sh          # --dry-run / --force / --uninstall
 ```
 
-會把七個 `.md` 複製到 `~/.claude/agents/`。無論哪種方式，裝完**都要開新
+會把角色 `.md` 複製到 `~/.claude/agents/`（並寫入 `.tlor-manifest`，讓
+`--uninstall` 精確移除實裝的檔案）。無論哪種方式，裝完**都要開新
 session**——agent 定義在 session 啟動時載入。
 
 ## 備註
@@ -63,6 +67,21 @@ session**——agent 定義在 session 啟動時載入。
   prompt，違反即自動 FAIL。
 - model 名（haiku/sonnet/opus）依 Agent 工具接受值；環境不同請自行改
   frontmatter。
+
+## 誠實限制
+
+- **帶 Bash 的「唯讀」是行為約束**：`eagle-sentinel`、`elf-archer`、
+  `orc-saboteur` 為了跑測試持有 Bash，而 Bash 技術上能寫檔——「絕不編輯」
+  是指令不是沙箱。`hobbit-gardener` 是唯一工具層真唯讀的小組成員。
+- **模型不可用時靜默 fallback**：依官方文件，被組織排除的 `model:` 值會
+  讓 subagent 改跑 session 繼承的模型、不報錯。沒有 opus 的環境，
+  `eagle-sentinel` 會安靜地跑在你 session 的模型上。
+
+## 發布流程（維護者）
+
+改動後先 `claude plugin validate . --strict`（驗 plugin.json＋agent
+frontmatter），用 `claude --plugin-dir .` 本地實測，最後 bump
+`.claude-plugin/plugin.json` 的 `version`——使用者只在版本號變動時收到更新。
 
 ## 授權與致敬
 

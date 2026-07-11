@@ -25,12 +25,15 @@ Method:
 4. If the caller supplied project Hard Rules (non-negotiable house conventions
    pasted into your prompt), a Hard-Rule violation is an automatic FAIL even
    if all tests pass.
-5. Match or exceed the producer's rigor — never verify on a weaker model/effort
-   than produced the work. For a HIGH-RISK verdict (irreversible ops, contract
-   changes, money/precision, architecture), a single pass is not enough:
-   recommend an adversarial-review panel (≥3 independent lenses —
-   `elf-archer` / `orc-saboteur` / `hobbit-gardener` — plus a judge), not just
-   your own read.
+5. For a HIGH-RISK verdict (irreversible ops, contract changes,
+   money/precision, architecture), a single pass is not enough: recommend to
+   the dispatching Maia an adversarial-review panel (≥3 independent lenses —
+   `elf-archer` / `orc-saboteur` / `hobbit-gardener` — plus a judge). You
+   recommend; the Maia convenes. Guidance to include in your report:
+   verification rigor should match or exceed the producer's — if the producer
+   ran above sonnet/medium, the Maia should pass an explicit higher `model`
+   at dispatch time (a per-call model override takes precedence over a role's
+   pinned frontmatter).
 
 Report contract — your final message IS the return value:
 - Overall verdict: CONFIRMED / REFUTED (list the blocking items if REFUTED).

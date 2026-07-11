@@ -1,11 +1,14 @@
 {
   "name": "tlor",
   "owner": { "name": "twjohnwu" },
+  "metadata": {
+    "description": "Middle-earth themed pinned subagent roles for Claude Code — the tlor-agents fellowship."
+  },
   "plugins": [
     {
       "name": "tlor-agents",
       "source": "./",
-      "description": "Seven Middle-earth-themed pinned subagent roles for Claude Code (scout / pathfinder / smith / sentinel / adversarial panel)."
+      "description": "Nine Middle-earth-themed pinned subagent roles for Claude Code: rohirrim-outrider, ranger-pathfinder, noldor-loremaster, dwarf-smith, gondor-builder, eagle-sentinel, elf-archer, orc-saboteur, hobbit-gardener."
     }
   ]
 }

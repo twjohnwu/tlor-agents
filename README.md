@@ -1,6 +1,6 @@
 # TLOR Agents — a Middle-earth fellowship for Claude Code
 
-Seven pinned subagent roles for [Claude Code](https://code.claude.com), themed
+Nine pinned subagent roles for [Claude Code](https://code.claude.com), themed
 on the races of Middle-earth. Each role fixes its **model / effort / tools**
 in frontmatter, so cost and responsibility are decided by design — not by
 whatever the orchestrator happens to inherit.
@@ -22,14 +22,19 @@ whatever the orchestrator happens to inherit.
 |---|---|---|---|
 | `rohirrim-outrider` | Rohirrim outrider | haiku / low | Fast, cheap, targeted lookup: "where is X / how does Y work" |
 | `ranger-pathfinder` | Ranger of the North | sonnet / low | Broad, thorough read-only sweep when a miss is costly |
+| `noldor-loremaster` | Noldorin loremaster | sonnet / medium | Web/docs research with sources and versions; fact vs inference |
 | `dwarf-smith` | Dwarven smith | sonnet / low | Fully-specified mechanical work; never improvises |
+| `gondor-builder` | Mason of Gondor | sonnet / medium | Implements a clear spec with local judgment; design stays with the Maia |
 | `eagle-sentinel` | Great Eagle | opus / medium | Fresh-context adversarial verification; CONFIRMED/REFUTED |
 | `elf-archer` | Elven archer | sonnet / medium | Correctness lens: every arrow pins one logical flaw |
 | `orc-saboteur` | Orc saboteur | sonnet / medium | Security & failure lens: injection, races, partial failure |
 | `hobbit-gardener` | Hobbit gardener | sonnet / medium | Simplicity lens: prunes over-engineering |
 
-The last three form the **adversarial review panel** that `eagle-sentinel`
-convenes for high-risk verdicts (≥3 independent lenses + a judge).
+The last three form the **adversarial review panel**: for high-risk verdicts
+`eagle-sentinel` recommends it, and the Maia convenes it (≥3 independent
+lenses + a judge). To match a stronger producer's rigor, pass an explicit
+higher `model` when dispatching the lenses — a per-call override beats the
+role's pinned frontmatter.
 
 ## Install
 
@@ -50,9 +55,10 @@ git clone https://github.com/twjohnwu/tlor-agents.git
 cd tlor-agents && ./install.sh          # --dry-run / --force / --uninstall
 ```
 
-Copies the seven `.md` files into `~/.claude/agents/`. Either way, **open a
-new Claude Code session afterwards** — agent definitions are loaded at
-session start.
+Copies the role `.md` files into `~/.claude/agents/` (and records a
+`.tlor-manifest` there so `--uninstall` removes exactly what was installed).
+Either way, **open a new Claude Code session afterwards** — agent definitions
+are loaded at session start.
 
 ## Notes
 
@@ -69,6 +75,24 @@ session start.
   violation. Paste yours when dispatching.
 - Model names (`haiku`/`sonnet`/`opus`) follow the Agent tool's accepted
   values; edit the frontmatter if your environment differs.
+
+## Limits (honest notes)
+
+- **"Read-only" is behavioral for Bash-carrying roles.** `eagle-sentinel`,
+  `elf-archer` and `orc-saboteur` hold Bash to run tests/inspection; Bash can
+  technically write, so their never-edits stance is an instruction, not a sandbox.
+  `hobbit-gardener` is the one panel role that is read-only at the tool level.
+- **Unavailable model → silent fallback.** Per official docs, a `model:` value
+  your org excludes makes the subagent run on the inherited session model
+  instead — no error. If you have no opus access, `eagle-sentinel` quietly
+  runs on your session's model.
+
+## Releasing (maintainers)
+
+Before publishing changes: `claude plugin validate . --strict` (validates
+plugin.json + agent frontmatter), test locally with
+`claude --plugin-dir .`, then bump `version` in `.claude-plugin/plugin.json` —
+users only receive updates when the version changes.
 
 ## License & homage
 
