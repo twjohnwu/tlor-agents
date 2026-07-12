@@ -1,5 +1,9 @@
 # TLOR Agents — 給 Claude Code 的中土遠征隊
 
+[![CI](https://github.com/twjohnwu/tlor-agents/actions/workflows/validate.yml/badge.svg)](https://github.com/twjohnwu/tlor-agents/actions/workflows/validate.yml)
+[![version](https://img.shields.io/badge/version-1.4.0-blue)](https://github.com/twjohnwu/tlor-agents/blob/main/.claude-plugin/plugin.json)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 九個固定職責的 subagent 角色，以魔戒中土種族為主題。每個角色的
 **model／effort／tools 都寫死在 frontmatter**——成本與權責由設計決定，
 不是隨 orchestrator 的環境浮動。

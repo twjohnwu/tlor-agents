@@ -1,5 +1,9 @@
 # TLOR Agents — a Middle-earth fellowship for Claude Code
 
+[![CI](https://github.com/twjohnwu/tlor-agents/actions/workflows/validate.yml/badge.svg)](https://github.com/twjohnwu/tlor-agents/actions/workflows/validate.yml)
+[![version](https://img.shields.io/badge/version-1.4.0-blue)](https://github.com/twjohnwu/tlor-agents/blob/main/.claude-plugin/plugin.json)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 Nine pinned subagent roles for [Claude Code](https://code.claude.com), themed
 on the races of Middle-earth. Each role fixes its **model / effort / tools**
 in frontmatter, so cost and responsibility are decided by design — not by
