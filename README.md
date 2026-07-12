@@ -36,6 +36,16 @@ lenses + a judge). For routine or borderline convenings, pass an explicit
 `model: sonnet` downgrade when dispatching the lenses — a per-call override beats the
 role's pinned frontmatter.
 
+## Skills
+
+The plugin ships one skill, `/tlor-agents:adversarial-review` — the convening
+procedure for the panel: assemble a self-contained review package, dispatch
+the three lenses in parallel, resolve by majority-survival verdict, and loop
+until dry for critical conclusions. Plugin installs get it automatically;
+`install.sh` (Option B) copies it to `~/.claude/skills/`, where it is invoked
+as `/adversarial-review`. A 繁體中文 translation copy ships alongside it
+(`SKILL.zh-TW.md`).
+
 ## Install
 
 ### Option A — as a plugin (recommended)
@@ -104,4 +114,5 @@ users only receive updates when the version changes.
 MIT © [twjohnwu](https://github.com/twjohnwu). A fan homage to
 J.R.R. Tolkien's legendarium; not affiliated with or endorsed by the Tolkien
 Estate or Middle-earth Enterprises. Race and role names are used
-thematically.
+thematically. The adversarial-review convening flow is inspired by
+[Miguok/fable-harness](https://github.com/Miguok/fable-harness) (MIT).

@@ -32,6 +32,14 @@ English version: [README.md](README.md).
 **Maia 召集**（≥3 個獨立鏡頭＋一位裁判）。例行或邊界案的召集，
 派遣鏡頭時可明示 `model: sonnet` 降級——派遣時的覆寫優先於角色的 frontmatter pin。
 
+## Skills
+
+本 plugin 附帶一個 skill：`/tlor-agents:adversarial-review`——召集抗辯
+小組的流程：組裝一份自足的審查包、並行派遣三個鏡頭、以多數存活制判定、
+關鍵結論循環直到收斂。Plugin 安裝方式會自動取得；`install.sh`（方式 B）
+會把它複製到 `~/.claude/skills/`，屆時以 `/adversarial-review` 呼叫。
+附一份繁體中文翻譯副本（`SKILL.zh-TW.md`）。
+
 ## 安裝
 
 ### 方式 A——plugin（推薦）
@@ -91,3 +99,5 @@ frontmatter），用 `claude --plugin-dir .` 本地實測，最後 bump
 
 MIT © [twjohnwu](https://github.com/twjohnwu)。本專案為對托爾金傳說體系的
 粉絲致敬，與 Tolkien Estate 及 Middle-earth Enterprises 皆無關、未獲其背書；種族與角色名僅作主題性使用。
+抗辯審查（adversarial-review）召集流程的靈感來自
+[Miguok/fable-harness](https://github.com/Miguok/fable-harness)（MIT）。
