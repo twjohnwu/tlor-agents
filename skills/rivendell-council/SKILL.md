@@ -1,9 +1,12 @@
 ---
-name: adversarial-review
+name: rivendell-council
 description: 'Multi-lens adversarial review — for major conclusions, architecture decisions, root-cause verdicts, or security judgments, dispatch the three opposition lenses (elf-archer, orc-saboteur, hobbit-gardener) in parallel to independently attack the conclusion; adopt it only if a majority survives. Triggers: "adversarial review", "多方抗辯", "抗辯", or any high-stakes judgment — irreversible operations, contract/schema changes, anything touching money or precision, architecture decisions, root-cause verdicts, production-affecting conclusions. Not for trivial edits or pure Q&A.'
 ---
 
-# Adversarial review (multi-lens opposition)
+# Rivendell Council (multi-lens adversarial review)
+
+> Named for the council at Rivendell that debated the Ring — and only then
+> dispatched the Fellowship. Debate first; act on what survives.
 
 > Ships with tlor-agents; the lenses are this plugin's `elf-archer`,
 > `orc-saboteur`, `hobbit-gardener` (pinned opus since v1.2.0).

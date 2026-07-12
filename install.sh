@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # install.sh — copy the TLOR agent roles into ~/.claude/agents/ and the
-# adversarial-review skill into ~/.claude/skills/ (no plugin system needed).
+# rivendell-council skill into ~/.claude/skills/ (no plugin system needed).
 # Usage: ./install.sh [--dry-run] [--force] [--uninstall]
 # Prefer the plugin route when possible:
 #   /plugin marketplace add twjohnwu/tlor-agents   then   /plugin install tlor-agents@tlor

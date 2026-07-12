@@ -34,11 +34,32 @@ English version: [README.md](README.md).
 
 ## Skills
 
-本 plugin 附帶一個 skill：`/tlor-agents:adversarial-review`——召集抗辯
+本 plugin 附帶一個 skill：`/tlor-agents:rivendell-council`——召集抗辯
 小組的流程：組裝一份自足的審查包、並行派遣三個鏡頭、以多數存活制判定、
 關鍵結論循環直到收斂。Plugin 安裝方式會自動取得；`install.sh`（方式 B）
-會把它複製到 `~/.claude/skills/`，屆時以 `/adversarial-review` 呼叫。
+會把它複製到 `~/.claude/skills/`，屆時以 `/rivendell-council` 呼叫。
 附一份繁體中文翻譯副本（`SKILL.zh-TW.md`）。
+
+**觸發方式。** 自動叫用是由 description 驅動的——模型會拿 skill
+description 裡的觸發詞去比對當下情境。若要硬保證觸發，在你專案的
+`CLAUDE.md` 加一行：
+
+```
+High-risk verdicts (irreversible ops, contract/schema changes, money/precision, architecture decisions, root-cause claims, production-affecting conclusions) MUST pass /tlor-agents:rivendell-council before adoption.
+```
+
+`eagle-sentinel` 給出 HIGH-RISK 建議就是該召集的訊號。
+
+## Verify gate（選配）
+
+一個 Stop hook，專門攔「沒有證據的完成宣稱」：若本輪修改了程式碼卻沒跑
+測試指令，就擋回一次結束、要求補上 fail-then-pass 證據，第二次結束
+（`stop_hook_active`）一律放行，session 不會被卡死。任何內部錯誤一律
+fail-open——gate 本身絕不可弄壞 session。
+
+**預設關閉**——在環境變數設 `TLOR_VERIFY_GATE=1` 才會啟用（例如寫進
+settings 的 `env` 區塊，或 shell export）。僅 plugin 安裝方式支援：
+`install.sh`（方式 B）不接 hooks。
 
 ## 安裝
 
@@ -99,5 +120,6 @@ frontmatter），用 `claude --plugin-dir .` 本地實測，最後 bump
 
 MIT © [twjohnwu](https://github.com/twjohnwu)。本專案為對托爾金傳說體系的
 粉絲致敬，與 Tolkien Estate 及 Middle-earth Enterprises 皆無關、未獲其背書；種族與角色名僅作主題性使用。
-抗辯審查（adversarial-review）召集流程的靈感來自
+瑞文戴爾會議（rivendell-council）召集流程的靈感來自，verify-gate hook
+則改寫自
 [Miguok/fable-harness](https://github.com/Miguok/fable-harness)（MIT）。

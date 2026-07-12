@@ -1,6 +1,9 @@
-# 多方抗辯審查（Adversarial review）
+# 瑞文戴爾會議（多方抗辯審查）
 
 > 本檔為 SKILL.md 的繁體中文說明譯本；英文版 SKILL.md 為準（功能檔）。
+
+> 取名自瑞文戴爾那場辯論魔戒去向的會議——辯完，才派出遠征隊。
+> 先抗辯，後行動。
 
 > 隨 tlor-agents 附帶；三個鏡頭是本 plugin 的 `elf-archer`、
 > `orc-saboteur`、`hobbit-gardener`（自 v1.2.0 起固定 opus）。

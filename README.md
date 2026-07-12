@@ -38,13 +38,35 @@ role's pinned frontmatter.
 
 ## Skills
 
-The plugin ships one skill, `/tlor-agents:adversarial-review` — the convening
+The plugin ships one skill, `/tlor-agents:rivendell-council` — the convening
 procedure for the panel: assemble a self-contained review package, dispatch
 the three lenses in parallel, resolve by majority-survival verdict, and loop
 until dry for critical conclusions. Plugin installs get it automatically;
 `install.sh` (Option B) copies it to `~/.claude/skills/`, where it is invoked
-as `/adversarial-review`. A 繁體中文 translation copy ships alongside it
+as `/rivendell-council`. A 繁體中文 translation copy ships alongside it
 (`SKILL.zh-TW.md`).
+
+**Triggering.** Auto-invocation is description-driven — the model matches
+the skill description's trigger words against the situation. For a hard
+guarantee, add one line to your project's `CLAUDE.md`:
+
+```
+High-risk verdicts (irreversible ops, contract/schema changes, money/precision, architecture decisions, root-cause claims, production-affecting conclusions) MUST pass /tlor-agents:rivendell-council before adoption.
+```
+
+`eagle-sentinel`'s HIGH-RISK recommendation is the convening signal.
+
+## Verify gate (opt-in)
+
+A Stop hook that catches "done" claims with no evidence behind them: if code
+files were edited this turn and no test command was run, it blocks the turn
+from ending once, asking for fail-then-pass evidence, then lets the next
+stop through (`stop_hook_active`) so a session can never get stuck. It fails
+open on any internal error — the gate must never break a session.
+
+**OFF by default** — enable with `TLOR_VERIFY_GATE=1` in your environment
+(e.g. your settings' `env` block, or a shell export). Plugin installs only:
+`install.sh` (Option B) does not wire hooks.
 
 ## Install
 
@@ -114,5 +136,6 @@ users only receive updates when the version changes.
 MIT © [twjohnwu](https://github.com/twjohnwu). A fan homage to
 J.R.R. Tolkien's legendarium; not affiliated with or endorsed by the Tolkien
 Estate or Middle-earth Enterprises. Race and role names are used
-thematically. The adversarial-review convening flow is inspired by
+thematically. The rivendell-council convening flow is inspired by, and the
+verify-gate hook is adapted from,
 [Miguok/fable-harness](https://github.com/Miguok/fable-harness) (MIT).

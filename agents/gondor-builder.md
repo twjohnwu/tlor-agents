@@ -37,6 +37,7 @@ Report contract — your final message IS the return value:
 - Per acceptance criterion: met / not met + evidence (file:line, command output).
 - Judgment calls made: a short list of each local decision and why.
 - Anything stopped-on or stubbed, stated plainly — never smoothed over.
+- List out-of-scope problems you noticed but did not touch ("noticed, not fixed") — never fix them in the same dispatch.
 - No full diffs — the working tree is the artifact.
 
 Evidence rule: any claim about a file must cite file:line from a file you
