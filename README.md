@@ -4,10 +4,10 @@
 [![version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/twjohnwu/tlor-agents/blob/main/.claude-plugin/plugin.json)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Nine pinned subagent roles for [Claude Code](https://code.claude.com), themed
-on the races of Middle-earth. Each role fixes its **model / effort / tools**
-in frontmatter, so cost and responsibility are decided by design — not by
-whatever the orchestrator happens to inherit.
+An orchestration framework for [Claude Code](https://code.claude.com), themed
+on Middle-earth. Nine pinned subagent roles with fixed model/effort/tools,
+plus dispatch rules, setup skills, and opt-in guard hooks — everything an AI
+coding session needs to delegate reliably.
 
 繁體中文說明請見 [README.zh-TW.md](README.zh-TW.md).
 
@@ -42,17 +42,28 @@ role's pinned frontmatter.
 
 ## Skills
 
-The plugin ships one skill, `/tlor-agents:rivendell-council` — the convening
-procedure for the panel: assemble a self-contained review package, dispatch
-the three lenses in parallel, resolve by majority-survival verdict, and loop
-until dry for critical conclusions. Plugin installs get it automatically;
-`install.sh` (Option B) copies it to `~/.claude/skills/`, where it is invoked
-as `/rivendell-council`. A 繁體中文 translation copy ships alongside it
-(`SKILL.zh-TW.md`).
+| Skill | Purpose |
+|---|---|
+| `/rivendell-council` | Convene the adversarial panel (3 lenses, majority-survival verdict) |
+| `/tlor-init` | Install agents + rules + CLAUDE.md routing + optional hooks |
+| `/tlor-restore` | Rollback to a previous installation from backup |
 
-**Triggering.** Auto-invocation is description-driven — the model matches
-the skill description's trigger words against the situation. For a hard
-guarantee, add one line to your project's `CLAUDE.md`:
+**rivendell-council** — the convening procedure for the adversarial panel:
+assemble a self-contained review package, dispatch the three lenses in
+parallel, resolve by majority-survival verdict, and loop until dry for
+critical conclusions.
+
+**tlor-init** — one-time setup skill that installs the full framework:
+choose installation level (user/project/repo), copy agents and rules,
+generate CLAUDE.md routing, optionally enable hooks. Detects existing
+installations and offers upgrade with backup.
+
+**tlor-restore** — rollback from backups created by `/tlor-init` during
+upgrades.
+
+**Triggering.** Auto-invocation of `/rivendell-council` is description-driven
+— the model matches the skill description's trigger words against the
+situation. For a hard guarantee, add one line to your project's `CLAUDE.md`:
 
 ```
 High-risk verdicts (irreversible ops, contract/schema changes, money/precision, architecture decisions, root-cause claims, production-affecting conclusions) MUST pass /tlor-agents:rivendell-council before adoption.
@@ -60,17 +71,49 @@ High-risk verdicts (irreversible ops, contract/schema changes, money/precision, 
 
 `eagle-sentinel`'s HIGH-RISK recommendation is the convening signal.
 
-## Verify gate (opt-in)
+## Rules
 
-A Stop hook that catches "done" claims with no evidence behind them: if code
-files were edited this turn and no test command was run, it blocks the turn
-from ending once, asking for fail-then-pass evidence, then lets the next
-stop through (`stop_hook_active`) so a session can never get stuck. It fails
-open on any internal error — the gate must never break a session.
+The plugin bundles depersonalized orchestration rules — install them via
+`/tlor-init` or `install.sh`:
 
-**OFF by default** — enable with `TLOR_VERIFY_GATE=1` in your environment
-(e.g. your settings' `env` block, or a shell export). Plugin installs only:
-`install.sh` (Option B) does not wire hooks.
+**Required** (6 files):
+
+| Rule | Purpose |
+|---|---|
+| `dispatch.md` | Role dispatch table, delegation contract, escalation paths, verification rules |
+| `decomposition.md` | How to split tasks into dispatches (parallel vs sequential, sizing) |
+| `delegation-templates.md` | Fill-in prompt templates for each dispatch type |
+| `judgment.md` | When to escalate, when done, when to ask, wrong-direction signals |
+| `risk-tiers.md` | Classify actions by risk (T1 irreversible / T2 hard-to-undo / T3 reversible) |
+| `maintenance.md` | What sessions may change vs what needs human approval |
+
+**Optional** (2 files — install with `--with-optional` or choose in `/tlor-init`):
+
+| Rule | Purpose |
+|---|---|
+| `design-principles.md` | 7 fallback principles for uncovered cases (P1-P7) |
+| `user-decision-patterns.md` | 3 decision patterns for AI-assisted development (D1-D3) |
+
+## Hooks (opt-in)
+
+Both hooks are **OFF by default** — enable via environment variables.
+Plugin installs only: `install.sh` does not wire hooks.
+
+### institution_guard (PreToolUse)
+
+Blocks the main session from directly editing rules/CLAUDE.md/AGENTS.md
+files — enforces "the commander doesn't do field work." Subagent edits
+pass through. Python-first with bash fallback.
+
+Enable: `export TLOR_INSTITUTION_GUARD=1`
+
+### verify_gate (Stop)
+
+Catches "done" claims with no evidence: if code files were edited this turn
+and no test command was run, it blocks the turn once, asking for fail-then-pass
+evidence. Fails open on any internal error.
+
+Enable: `export TLOR_VERIFY_GATE=1`
 
 ## Install
 
@@ -88,11 +131,20 @@ Updates: bump happens on our side via the `version` field; refresh with
 
 ```bash
 git clone https://github.com/twjohnwu/tlor-agents.git
-cd tlor-agents && ./install.sh          # --dry-run / --force / --uninstall
+cd tlor-agents && ./install.sh          # --dry-run / --force / --uninstall / --with-optional
 ```
 
-Copies the role `.md` files into `~/.claude/agents/` (and records a
-`.tlor-manifest` there so `--uninstall` removes exactly what was installed).
+Copies agents to `~/.claude/agents/`, rules to `~/.claude/rules/`, and skills
+to `~/.claude/skills/`. Add `--with-optional` to include the optional rules.
+Records manifests for clean `--uninstall`. Hooks are not wired — use the
+plugin route (Option A) for hooks.
+
+### Option C — /tlor-init (recommended after plugin install)
+
+After installing via Option A, run `/tlor-init` in Claude Code for guided
+setup: choose installation level, install rules, generate CLAUDE.md routing,
+and optionally enable hooks.
+
 Either way, **open a new Claude Code session afterwards** — agent definitions
 are loaded at session start.
 
@@ -101,16 +153,13 @@ are loaded at session start.
 - **Serena tools are optional.** The two search roles list
   [Serena](https://github.com/oraios/serena) semantic tools in `tools`; if you
   don't have the plugin, the roles fall back to Grep/Glob (instructions say so).
-- **Shadowing the built-in Explore**: since Claude Code v2.1.198 the built-in
-  `Explore` agent inherits your session model (capped at Opus) — on an
-  expensive session, unpinned explores burn the expensive model. To pin it,
-  copy `ranger-pathfinder.md` to `~/.claude/agents/Explore.md` (keep
-  `name: Explore`... adjust the frontmatter name accordingly).
 - **Hard rules slot**: `eagle-sentinel` treats caller-supplied "Hard Rules"
   (non-negotiable house conventions pasted into its prompt) as auto-FAIL on
   violation. Paste yours when dispatching.
 - Model names (`haiku`/`sonnet`/`opus`) follow the Agent tool's accepted
-  values; edit the frontmatter if your environment differs.
+  values; edit the frontmatter if your environment differs. The rules use
+  tier-based language (cheap/mid-tier/top-tier) so they stay portable even as
+  agent frontmatter keeps specific model names.
 
 ## Limits (honest notes)
 
