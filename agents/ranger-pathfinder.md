@@ -10,6 +10,7 @@ description: |
   "not found". For a targeted, known-shape lookup use `rohirrim-outrider`
   (haiku) instead — this is the pricier sonnet tier, reached for when breadth
   matters.
+version: 1.4.0
 model: sonnet
 effort: low
 tools: Read, Grep, Glob, Bash, mcp__plugin_serena_serena__find_symbol, mcp__plugin_serena_serena__find_referencing_symbols, mcp__plugin_serena_serena__find_declaration, mcp__plugin_serena_serena__find_implementations, mcp__plugin_serena_serena__get_symbols_overview, mcp__plugin_serena_serena__search_for_pattern

@@ -7,6 +7,7 @@ description: |
   across many sites.
   Use when: the transformation is unambiguous and can be described with a
   before/after example — no design judgment required.
+version: 1.4.0
 model: sonnet
 effort: low
 tools: Read, Edit, Write, Bash, Grep, Glob

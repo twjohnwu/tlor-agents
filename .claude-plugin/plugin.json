@@ -1,10 +1,10 @@
 {
   "name": "tlor-agents",
   "displayName": "TLOR Agents — a Middle-earth fellowship for Claude Code",
-  "version": "1.4.0",
-  "description": "Nine pinned subagent roles themed on Middle-earth races: rohirrim-outrider, ranger-pathfinder, noldor-loremaster, dwarf-smith, gondor-builder, eagle-sentinel, and the adversarial panel elf-archer / orc-saboteur / hobbit-gardener. Each role pins model/effort/tools so cost and responsibility are fixed by design. Plus the rivendell-council convening skill and an opt-in verify-gate Stop hook.",
+  "version": "2.0.0",
+  "description": "Orchestration framework for Claude Code: nine Middle-earth-themed pinned subagent roles, dispatch rules, judgment rubrics, risk tiers, and the /tlor-init setup skill. Roles pin model/effort/tools by design; rules enforce delegation discipline and verification.",
   "author": { "name": "twjohnwu", "url": "https://github.com/twjohnwu" },
   "repository": "https://github.com/twjohnwu/tlor-agents",
   "license": "MIT",
-  "keywords": ["agents", "subagents", "lotr", "roles", "dispatch", "rivendell-council"]
+  "keywords": ["agents", "subagents", "lotr", "roles", "dispatch", "rivendell-council", "rules", "orchestration", "tlor-init"]
 }

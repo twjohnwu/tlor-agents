@@ -5,6 +5,7 @@ description: |
   lens. Reviews a conclusion/design for its weakest points: input validation,
   permissions, race conditions, data loss, partial failure, boundary
   conditions. Read-only; used in multi-lens adversarial review.
+version: 1.4.0
 model: opus
 effort: medium
 tools: Read, Grep, Glob, Bash

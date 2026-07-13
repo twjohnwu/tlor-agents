@@ -9,6 +9,7 @@ description: |
   this codebase — "what's the current API for X", "which version introduced
   Y", "is this behavior documented". For questions about THIS repo's code,
   use `rohirrim-outrider` / `ranger-pathfinder` instead.
+version: 1.4.0
 model: sonnet
 effort: medium
 tools: Read, Grep, Glob, WebSearch, WebFetch, Write

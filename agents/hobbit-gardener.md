@@ -5,6 +5,7 @@ description: |
   over-engineering the way Sam tends a garden: unnecessary abstraction,
   flexibility nobody asked for, 200 lines that could be 50. Read-only; used
   in multi-lens adversarial review.
+version: 1.4.0
 model: opus
 effort: medium
 tools: Read, Grep, Glob

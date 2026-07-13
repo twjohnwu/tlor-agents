@@ -2,7 +2,7 @@
   "name": "tlor",
   "owner": { "name": "twjohnwu" },
   "metadata": {
-    "description": "Middle-earth themed pinned subagent roles for Claude Code — the tlor-agents fellowship."
+    "description": "Middle-earth themed orchestration framework for Claude Code — pinned subagent roles, dispatch rules, and setup skills."
   },
   "plugins": [
     {

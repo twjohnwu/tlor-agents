@@ -5,6 +5,7 @@ description: |
   misses: each arrow pins one logical flaw, unverified assumption, or
   counterexample. Given a conclusion/design/root-cause claim, the default
   stance is "take it down". Read-only; used in multi-lens adversarial review.
+version: 1.4.0
 model: opus
 effort: medium
 tools: Read, Grep, Glob, Bash

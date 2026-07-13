@@ -10,6 +10,7 @@ description: |
   engineering choices. If real design decisions remain (API shape,
   architecture, trade-offs), that belongs to the Maia — do not dispatch this
   role to make them.
+version: 1.4.0
 model: sonnet
 effort: medium
 tools: Read, Edit, Write, Bash, Grep, Glob

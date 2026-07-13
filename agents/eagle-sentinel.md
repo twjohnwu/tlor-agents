@@ -7,6 +7,7 @@ description: |
   CONFIRMED/REFUTED with evidence. Never edits or fixes anything.
   Use when: work needs an independent check before it's called done — code
   diffs, generated docs/artifacts, contract changes, root-cause claims.
+version: 1.4.0
 model: opus
 effort: medium
 tools: Read, Grep, Glob, Bash

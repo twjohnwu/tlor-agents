@@ -1,7 +1,7 @@
 # TLOR Agents — 給 Claude Code 的中土遠征隊
 
 [![CI](https://github.com/twjohnwu/tlor-agents/actions/workflows/validate.yml/badge.svg)](https://github.com/twjohnwu/tlor-agents/actions/workflows/validate.yml)
-[![version](https://img.shields.io/badge/version-1.4.0-blue)](https://github.com/twjohnwu/tlor-agents/blob/main/.claude-plugin/plugin.json)
+[![version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/twjohnwu/tlor-agents/blob/main/.claude-plugin/plugin.json)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 九個固定職責的 subagent 角色，以魔戒中土種族為主題。每個角色的
