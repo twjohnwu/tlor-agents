@@ -38,7 +38,7 @@ making it looser = user decision.
 
 | Lesson type | Destination | Format |
 |-------------|-------------|--------|
-| Recurring workflow failure (a dispatch pattern that misfires, a judgment call the rubrics got wrong) | `## Lessons` section at the bottom of the relevant rules file | `- YYYY-MM-DD (model): symptom → root cause → rule adjustment made/proposed` |
+| Recurring workflow failure (a dispatch pattern that misfires, a judgment call the rubrics got wrong) | the matching `## {rule name}` section in `rules/customize/lessons.md` (base rule files carry no `## Lessons` section — they're unconditionally overwritten on upgrade) | `- YYYY-MM-DD (model): symptom → root cause → rule adjustment made/proposed` |
 | Project/code decision that got reversed or argued | that project's decisions log (e.g. `decisions_log/{repo}.md`) | that project's decision-log convention |
 | Project-specific gotcha | that project's instruction file (AGENTS.md or equivalent) | inline note |
 | Environment/tooling facts (a new tool/command recipe) | `rules/customize/` or the memory system | recipe with a runnable example, or the memory file format |
@@ -59,8 +59,9 @@ without session context would misread.
   the routing file > 40 lines → compact: merge duplicate lessons into the rule body, extract
   detail into a referenced file, delete superseded entries. Keep a dated
   `.bak-YYYYMMDD` copy beside the file before compacting.
-- A `## Lessons` section > 20 entries → fold the stable ones into the rules
-  proper and delete the entries.
+- A `## {rule name}` section in `rules/customize/lessons.md` > 20 entries →
+  propose folding the stable ones into a `proposed:` rule change (per "Where
+  lessons go" above) and delete the entries once landed.
 
 ## Invariants (never break during maintenance)
 

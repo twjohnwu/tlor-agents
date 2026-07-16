@@ -142,7 +142,3 @@ owns the CSV format decision; the three guess differently; integration fails.
 3. eagle-sentinel (model: sonnet): run the acceptance commands, per dispatch.md §5.
 The frontend button, if needed, is step 2b AFTER the API shape from step 2
 is fixed — it depends on the response contract.
-
-## Lessons
-
-(append per maintenance.md format)

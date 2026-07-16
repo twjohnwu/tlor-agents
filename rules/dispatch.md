@@ -188,7 +188,3 @@ no acceptance criteria (§2) · cosmetic-reword retries on the same model (§4)
 · pasting >100-line files into the main conversation (§1) · accepting the
 producer's "all tests pass" (§5) · using a generic search agent when a
 pinned role fits the task (§3).
-
-## Lessons
-
-(append per maintenance.md format)

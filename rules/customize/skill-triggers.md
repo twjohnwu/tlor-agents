@@ -1,9 +1,8 @@
----
-managed-by: tlor-orchestration  # plugin-managed, do not edit; overrides go in rules/customize/
-audience: all
----
-
 # skill-triggers.md — When to invoke a skill (overriding blanket "always invoke" injections)
+
+This file is yours: it lives in `rules/customize/`, so the installer never
+overwrites it once it exists. Fill in the namespace-priority table below for
+your own installed plugins.
 
 Some plugins inject a rule like "if there's even a 1% chance a skill applies,
 you MUST invoke it." That kind of plugin usually also says user/project

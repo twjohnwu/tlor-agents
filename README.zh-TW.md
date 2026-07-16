@@ -49,6 +49,9 @@ base rule 檔案，升級前請把你的修改搬到 `rules/customize/`——下
 - **`rules/customize/` 是你的。** installer 會建立這個目錄，首次安裝可能
   幫你種入選配的起始檔案，之後**永遠不覆蓋**裡面已存在的任何東西——這是
   唯一該放持久本地客製化內容的地方。
+- **Base 檔案沒有任何使用者可寫區塊。** 所有使用者自行新增的內容——
+  lessons、skill namespace 優先序表、本地慣例——一律放在 `rules/customize/`，
+  絕不放進 base rule 檔案，因為那裡任何追加內容都會在下次無條件覆蓋時被清空。
 - **`~/.claude/institution/` layout。** 使用者層級安裝時，
   `~/.claude/{agents,rules,hooks}` 會變成指向 `~/.claude/institution/<name>/`
   的 symlink。這是冪等的：已經是 symlink → 不動；已有真實目錄 → 搬到
@@ -113,8 +116,8 @@ High-risk verdicts (irreversible ops, contract/schema changes, money/precision, 
 
 本 plugin 附帶去個人化的編排規則——透過 `/tlor-init` 或 `install.sh` 安裝：
 
-**必裝**（7 檔，由 plugin 擁有——每次安裝／升級皆無條件覆蓋，`version`
-由 `.claude-plugin/plugin.json` 蓋上）：
+**必裝**（6 檔，由 plugin 擁有——每次安裝／升級皆無條件覆蓋，`version`
+由 `.claude-plugin/plugin.json` 蓋上，不含 `## Lessons` 區塊——見上方所有權模型）：
 
 | Rule | 用途 |
 |---|---|
@@ -124,9 +127,8 @@ High-risk verdicts (irreversible ops, contract/schema changes, money/precision, 
 | `judgment.md` | 何時升級、何時完成、何時問人、錯方向訊號 |
 | `risk-tiers.md` | 行動風險分級（T1 不可逆 / T2 難復原 / T3 可逆）|
 | `maintenance.md` | session 可自行修改 vs 需人類核准的項目 |
-| `skill-triggers.md` | 何時該呼叫 skill，而非照單全收「一律呼叫」的注入規則——需自行填入已裝 plugin 的 namespace 優先序 |
 
-**選裝**（3 檔，位於 `rules/customize/`——`--with-optional` 或在
+**選裝**（5 檔，位於 `rules/customize/`——`--with-optional` 或在
 `/tlor-init` 中選擇；一旦複製過去就不會再被覆蓋）：
 
 | Rule | 用途 |
@@ -134,6 +136,8 @@ High-risk verdicts (irreversible ops, contract/schema changes, money/precision, 
 | `design-principles.md` | 7 個未覆蓋情境的備用原則（P1-P7）|
 | `user-decision-patterns.md` | 3 個 AI 輔助開發的決策模式（D1-D3）|
 | `letter-to-future-sessions.md` | 空白模板——逐次填入專案事實、制度衰退對策、誠實的能力邊界 |
+| `skill-triggers.md` | 何時該呼叫 skill，而非照單全收「一律呼叫」的注入規則——需自行填入已裝 plugin 的 namespace 優先序 |
+| `lessons.md` | 附加式的反覆工作流失敗紀錄，每個 base rule 檔案各一個區塊 |
 
 你也可以把自己團隊的規則檔（`.md`）直接放進 `rules/customize/`——安裝時
 會一併複製，且會透過 CLAUDE.md 的路由表自動載入，installer 永遠不會動它。
@@ -168,6 +172,17 @@ fail-then-pass 證據。任何內部錯誤一律 fail-open。
 ```
 
 更新：我們 bump `version` 後，用 `/plugin marketplace update tlor` 取得。
+
+### 更新支援
+
+更新支援僅限 marketplace 安裝路徑（方式 A）：
+`/plugin marketplace add twjohnwu/tlor-orchestration` 後
+`/plugin install tlor-orchestration@tlor`。每次發布都會 bump
+`.claude-plugin/plugin.json` 的 `version`——依 Claude Code 官方 plugin
+文件，光是推送 commit 不會讓更新出現，只有版本號變動才會，之後
+`/plugin marketplace update tlor` 才拉得到新版。`install.sh` 直接複製路徑
+（方式 B）完全沒有更新提示 UI——重跑 `install.sh` 會再次覆蓋 base rules，
+但不會通知你有新版本；請自行查 repo 的 releases 或版本徽章。
 
 ### 方式 B——直接複製
 

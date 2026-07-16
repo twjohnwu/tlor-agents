@@ -79,7 +79,7 @@ If local version >= bundled version, skip automatically.
 
 ### Step 4: Install required rules
 
-Base rules are **plugin-owned**: copy the 7 required rule files from the
+Base rules are **plugin-owned**: copy the 6 required rule files from the
 plugin's `rules/` directory to `<target>/rules/` as an **unconditional
 overwrite** — no version-compare-and-ask here, the plugin is the single
 source of truth for these files. While copying, inject a `version: <plugin
@@ -93,12 +93,11 @@ plugin's `.claude-plugin/plugin.json`, not from the shipped file itself).
 - judgment.md — when to escalate, when done, when to ask
 - risk-tiers.md — classify actions by risk before executing
 - maintenance.md — what's safe to change vs needs user approval
-- skill-triggers.md — when to invoke a skill instead of following a blanket
-  "always invoke" injection
 
-After installing `skill-triggers.md`, guide the user to fill in its
-placeholder namespace-priority table with the plugins they actually have
-installed — that table can't be filled in generically at build time.
+None of these 6 files carry a `## Lessons` section of their own — they're
+overwritten unconditionally on every upgrade, so anything appended there
+would be wiped. Recurring workflow lessons instead go in
+`rules/customize/lessons.md` (see Step 5).
 
 ### Step 5: Offer optional rules
 
@@ -110,6 +109,13 @@ plugin bundle:
 - **customize/letter-to-future-sessions.md** — a blank template the user
   fills in over time (non-obvious project facts, decay countermeasures,
   honest limits); ships empty on purpose.
+- **customize/skill-triggers.md** — when to invoke a skill instead of
+  following a blanket "always invoke" injection; ships with a
+  placeholder namespace-priority table. After installing, guide the user to
+  fill it in with the plugins they actually have installed — that table
+  can't be filled in generically at build time.
+- **customize/lessons.md** — the append-only log for recurring workflow
+  lessons, one `##` section per base rule file; ships with empty sections.
 
 These provide design philosophy guidance. The framework works without them.
 If installed, copy them to `<target>/rules/customize/`. Per the ownership
@@ -167,7 +173,7 @@ roles unless the user explicitly names another plugin's agent.
 | Unsure: escalate? done? ask user? wrong direction? | <rules-path>/judgment.md |
 | Classifying action risk before executing | <rules-path>/risk-tiers.md |
 | Updating rules or instruction files | <rules-path>/maintenance.md |
-| Deciding whether to invoke a skill | <rules-path>/skill-triggers.md |
+| Deciding whether to invoke a skill | <rules-path>/customize/skill-triggers.md (if installed) |
 | Project/team-specific conventions | <rules-path>/customize/ (scan all .md files) |
 ```
 

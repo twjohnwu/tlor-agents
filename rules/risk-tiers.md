@@ -72,7 +72,3 @@ loss and tell the user before touching anything else.
 - **Silent T1**: performing a T1 action and mentioning it afterwards in the
   summary. If you find yourself writing "I also pushed…", the process
   already failed; report it prominently, not buried.
-
-## Lessons
-
-(append per maintenance.md format)
