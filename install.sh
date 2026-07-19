@@ -2,8 +2,20 @@
 # install.sh — copy TLOR agent roles, skills, rules, and hooks into ~/.claude/
 # (no plugin system needed).
 # Usage: ./install.sh [--dry-run] [--force] [--uninstall] [--with-optional]
+#                      [--stdd-role=RD|PM|UIUX|ALL] [--install-hook]
 # Prefer the plugin route when possible:
 #   /plugin marketplace add twjohnwu/tlor-orchestration   then   /plugin install tlor-orchestration@tlor
+#
+# --stdd-role=RD|PM|UIUX|ALL: opt-in install of the STDD workflow skills
+#   (stdd-skills/*, non-autoload). Only ALL is implemented this round; RD/PM/
+#   UIUX print a deferred message and install nothing (see
+#   specs/stdd-integration.md S-33/S-35). No flag => no STDD skills, same as
+#   before this flag existed.
+# --install-hook: opt-in install + settings.json registration of the STDD
+#   test-file guard (REQ-09). Default NOT installed. HONEST CAVEAT: Claude
+#   Code reads PreToolUse hooks from settings.json once, at session start —
+#   a resumed/continued session will NOT pick up a hook registered mid-
+#   session. Verify this hook in a brand-new (non-resumed) session only.
 set -euo pipefail
 
 : "${HOME:?HOME is not set — refusing to guess an install location}"
@@ -12,6 +24,7 @@ SRC="$ROOT/agents"
 SKILLS_SRC="$ROOT/skills"
 RULES_SRC="$ROOT/rules"
 HOOKS_SRC="$ROOT/hooks"
+STDD_SKILLS_SRC="$ROOT/stdd-skills"
 PLUGIN_JSON="$ROOT/.claude-plugin/plugin.json"
 
 INSTITUTION="$HOME/.claude/institution"
@@ -19,21 +32,47 @@ DEST="$HOME/.claude/agents"
 SKILLS_DEST="$HOME/.claude/skills"
 RULES_DEST="$HOME/.claude/rules"
 HOOKS_DEST="$HOME/.claude/hooks"
+SETTINGS_JSON="$HOME/.claude/settings.json"
 MANIFEST="$DEST/.tlor-manifest"
 SKILLS_MANIFEST="$SKILLS_DEST/.tlor-manifest"
 RULES_MANIFEST="$RULES_DEST/.tlor-manifest"
 HOOKS_MANIFEST="$HOOKS_DEST/.tlor-manifest"
+STDD_MANIFEST="$SKILLS_DEST/.tlor-stdd-manifest"
 
-DRY=0; FORCE=0; UNINSTALL=0; WITH_OPTIONAL=0
+DRY=0; FORCE=0; UNINSTALL=0; WITH_OPTIONAL=0; STDD_ROLE=""; INSTALL_HOOK=0
 for a in "$@"; do
   case "$a" in
     --dry-run) DRY=1;;
     --force) FORCE=1;;
     --uninstall) UNINSTALL=1;;
     --with-optional) WITH_OPTIONAL=1;;
+    --stdd-role=*) STDD_ROLE="${a#*=}";;
+    --install-hook) INSTALL_HOOK=1;;
     *) echo "unknown arg: $a" >&2; exit 1;;
   esac
 done
+
+case "$STDD_ROLE" in
+  ""|RD|PM|UIUX|ALL) ;;
+  *) echo "unknown --stdd-role value: $STDD_ROLE (expected RD|PM|UIUX|ALL)" >&2; exit 1;;
+esac
+
+# S-33 profile table (config-driven, per specs/stdd-integration.md S-33):
+# maps a 視角 to its STDD skill dir subset. RD/PM/UIUX subsets are recorded
+# here for a future implementation session but are NOT installed this round
+# (deferred, D5) — `install.sh` currently only implements ALL, and prints a
+# deferred message for RD/PM/UIUX instead of installing their subset. ALL's
+# list is discovered dynamically from stdd-skills/*/ rather than hardcoded,
+# so a future 8th skill needs no change here.
+stdd_profile_skills() {
+  case "$1" in
+    RD)   echo "stdd-plan stdd-execute stdd stdd-lint" ;;
+    PM)   echo "stdd-explore stdd-spec stdd stdd-lint" ;;
+    UIUX) echo "stdd-explore stdd-uiux stdd stdd-lint" ;;
+    ALL)  (cd "$STDD_SKILLS_SRC" && ls -d */ | sed 's|/$||') ;;
+    *)    echo "" ;;
+  esac
+}
 
 # Single source of truth for the version stamped into every base rule file's
 # frontmatter — read directly from plugin.json, no jq dependency.
@@ -134,6 +173,25 @@ if [ "$UNINSTALL" -eq 1 ]; then
   done
   if [ "$DRY" -eq 0 ] && [ -f "$HOOKS_MANIFEST" ]; then rm "$HOOKS_MANIFEST"; fi
 
+  # STDD skills: only remove what our own manifest recorded (never guesses
+  # at a subset — the first line is `role=<...>`, the rest are skill dirs).
+  if [ -f "$STDD_MANIFEST" ]; then
+    for s in $(tail -n +2 "$STDD_MANIFEST"); do
+      if [ -d "$SKILLS_DEST/$s" ]; then
+        [ "$DRY" -eq 1 ] && echo "would remove STDD skill $SKILLS_DEST/$s" || { rm -rf "$SKILLS_DEST/$s"; echo "removed STDD skill $SKILLS_DEST/$s"; }
+      fi
+    done
+    if [ "$DRY" -eq 0 ]; then rm "$STDD_MANIFEST"; fi
+  fi
+
+  # STDD test-file guard hook: remove the copied script only. Un-registering
+  # the settings.json entry is left to the user (rewriting someone else's
+  # settings.json on uninstall without an explicit ask is a T2 action this
+  # script does not take unprompted — see hooks/register_stdd_hook.py note).
+  if [ -f "$HOOKS_DEST/stdd_test_guard.py" ]; then
+    [ "$DRY" -eq 1 ] && echo "would remove $HOOKS_DEST/stdd_test_guard.py" || { rm "$HOOKS_DEST/stdd_test_guard.py"; echo "removed $HOOKS_DEST/stdd_test_guard.py (settings.json entry left in place — remove it by hand)"; }
+  fi
+
   # Institution layout and its symlinks are left in place on uninstall —
   # unwinding a relocated real directory safely needs a decision only the
   # user can make; use /tlor-restore or undo it by hand.
@@ -214,6 +272,55 @@ for f in $HOOK_FILES; do
     [ "$DRY" -eq 1 ] && echo "would install $HOOKS_DEST/$f" || { cp "$HOOKS_SRC/$f" "$HOOKS_DEST/$f"; echo "installed $HOOKS_DEST/$f"; }
   fi
 done
+
+# STDD skills: opt-in, --stdd-role=RD|PM|UIUX|ALL (no flag → install nothing,
+# backward compatible — specs/stdd-integration.md S-35). Only ALL is
+# implemented this round; RD/PM/UIUX print the deferred message and install
+# nothing (no silent subset — S-33/S-35).
+if [ -n "$STDD_ROLE" ]; then
+  case "$STDD_ROLE" in
+    RD|PM|UIUX)
+      echo "此視角（${STDD_ROLE}）deferred，本輪僅支援 ALL（specs/stdd-integration.md S-33/S-35）——未安裝任何 STDD skill。"
+      ;;
+    ALL)
+      STDD_SKILLS=$(stdd_profile_skills ALL)
+      mkdir -p "$SKILLS_DEST"
+      for s in $STDD_SKILLS; do
+        if [ "$DRY" -eq 1 ]; then
+          echo "would install STDD skill $SKILLS_DEST/$s"
+        else
+          mkdir -p "$SKILLS_DEST/$s"
+          cp -r "$STDD_SKILLS_SRC/$s"/. "$SKILLS_DEST/$s"/
+          echo "installed STDD skill $SKILLS_DEST/$s"
+        fi
+      done
+      if [ "$DRY" -eq 0 ]; then
+        { echo "role=ALL"; printf '%s\n' $STDD_SKILLS; } > "$STDD_MANIFEST"
+        echo "recorded STDD role ALL in $STDD_MANIFEST"
+      fi
+      ;;
+  esac
+fi
+
+# STDD test-file guard hook: independent of --stdd-role (S-35). Default NOT
+# installed; only registers when --install-hook is explicitly passed.
+if [ "$INSTALL_HOOK" -eq 1 ]; then
+  if [ "$DRY" -eq 1 ]; then
+    echo "would install $HOOKS_DEST/stdd_test_guard.py and register its PreToolUse entry in $SETTINGS_JSON"
+  else
+    cp "$HOOKS_SRC/stdd_test_guard.py" "$HOOKS_DEST/stdd_test_guard.py"
+    echo "installed $HOOKS_DEST/stdd_test_guard.py"
+    if command -v python3 >/dev/null 2>&1; then
+      python3 "$HOOKS_SRC/register_stdd_hook.py" "$SETTINGS_JSON" "$HOOKS_DEST/stdd_test_guard.py"
+    else
+      echo "WARNING: python3 not found — could not auto-register the hook in $SETTINGS_JSON." >&2
+      echo "  Add manually: PreToolUse -> command: python3 \"$HOOKS_DEST/stdd_test_guard.py\"" >&2
+    fi
+    echo "NOTE: PreToolUse hooks are snapshotted at session start. If this install"
+    echo "  ran inside an existing (or --continue/--resume'd) session, the hook will"
+    echo "  NOT be active there — verify it in a brand-new session, not a resumed one."
+  fi
+fi
 
 [ "$DRY" -eq 1 ] && { echo "dry-run done (nothing written)."; exit 0; }
 

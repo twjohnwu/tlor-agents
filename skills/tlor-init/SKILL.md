@@ -122,7 +122,47 @@ If installed, copy them to `<target>/rules/customize/`. Per the ownership
 model below, only copy a file if it does not already exist at the
 destination — never overwrite something already in `customize/`.
 
-### Step 6: Create the customize directory
+### Step 6: STDD 視角選擇 (opt-in)
+
+Ask the user which STDD 視角 (perspective) to install, or to skip:
+
+- **RD** — stdd-plan, stdd-execute, stdd, stdd-lint (**deferred this round**)
+- **PM** — stdd-explore, stdd-spec, stdd, stdd-lint (**deferred this round**)
+- **UIUX** — stdd-explore, stdd-uiux, stdd, stdd-lint (**deferred this round**)
+- **ALL** — all 7 skills under the plugin's `stdd-skills/` directory
+  (discover the list dynamically — `ls stdd-skills/`, don't hardcode a count)
+- **skip** — install no STDD skills (default; keeps this step backward
+  compatible with users who never asked for STDD)
+
+If the user picks **RD**, **PM**, or **UIUX**: tell them plainly "此視角
+deferred，本輪僅支援 ALL" and install nothing for that choice — never
+silently fall back to installing some other subset.
+
+If the user picks **ALL**: copy each `stdd-skills/<name>/` directory from
+the plugin bundle to `<target>/skills/<name>/` (same copy style as Step 3's
+agent roles). Then record the choice in `<target>/skills/.tlor-stdd-manifest`
+— first line `role=ALL`, remaining lines the installed skill dir names (this
+mirrors `install.sh`'s manifest style, so `/tlor-restore`-style tooling can
+read it the same way).
+
+**Re-running this step** (upgrade or reconfigure) SHALL allow the user to
+change 視角:
+- **Additions** (switching to a 視角 that needs more skills than currently
+  installed) are incremental — copy only the newly-needed skill dirs, leave
+  existing ones alone.
+- **Removals** (switching to a 視角 that needs fewer skills, or to `skip`)
+  SHALL NOT happen silently — list exactly which skill dirs would be
+  removed and ask for explicit confirmation first.
+- **`[wip]` guard on removing `stdd-execute`**: if the removal set contains
+  `stdd-execute`, first scan every `STDD/<name>/tasks.md` in the current
+  project for `[wip]` or unchecked `[ ]` tasks. If any are found, warn the
+  user and require explicit confirmation before proceeding — suggested
+  wording (per specs/stdd-integration.md S-34): "偵測到 N 個 change 有未完成
+  任務，移除 `stdd-execute` 後將無法繼續該 change 的 execute 流程，建議先
+  恢復/完成後再切換——是否仍要繼續？" Only remove `stdd-execute` after the
+  user confirms.
+
+### Step 7: Create the customize directory
 
 Ensure `<target>/rules/customize/` exists at the install destination:
 
@@ -135,10 +175,10 @@ and the only place user content lives — **the installer never overwrites
 anything already in `customize/`**, no matter how it got there (Step 5
 optional copy, or the user's own files). Explain to the user: any `.md` file
 placed in `rules/customize/` is picked up automatically by the routing
-table's catch-all row (Step 7) — no further wiring needed, just drop the
+table's catch-all row (Step 8) — no further wiring needed, just drop the
 file in.
 
-### Step 7: Set up CLAUDE.md + AGENTS.md routing
+### Step 8: Set up CLAUDE.md + AGENTS.md routing
 
 Generate TWO files (replace `<rules-path>` with the actual path, e.g.
 `.claude/rules` for project level).
@@ -190,7 +230,7 @@ Handle CLAUDE.md and AGENTS.md as two SEPARATE existing-file checks:
   - **Skip**: leave the file unchanged (warn that routing won't auto-load
     for that file)
 
-### Step 8: Detect agent collisions
+### Step 9: Detect agent collisions
 
 Scan `<target>/agents/` for all agent definitions (not just tlor-orchestration).
 If agents from OTHER sources are found with overlapping functionality:
@@ -205,7 +245,7 @@ The AGENTS.md routing table already declares tlor-orchestration as PRIMARY targe
 Remind the user that explicit routing in AGENTS.md is the only reliable way
 to prevent namespace-based agent selection in multi-plugin environments.
 
-### Step 9: Offer hooks (opt-in)
+### Step 10: Offer hooks (opt-in)
 
 Present available hooks with clear descriptions:
 
@@ -236,7 +276,7 @@ export TLOR_INSTITUTION_GUARD=1  # Enable institution file guard
 export TLOR_VERIFY_GATE=1        # Enable test verification gate
 ```
 
-### Step 10: Report summary
+### Step 11: Report summary
 
 Print installation summary:
 
@@ -245,6 +285,7 @@ tlor-orchestration initialization complete:
   Agents:    N installed (M updated, K skipped)
   Rules:     N installed (M updated, K skipped)
   Optional:  N installed (rules/customize/)
+  STDD:      role=RD/PM/UIUX/ALL/skip (N skills installed)
   CLAUDE.md: created / updated / skipped
   AGENTS.md: created / updated / skipped
   Hooks:     institution_guard (enabled/skipped), verify_gate (enabled/skipped)

@@ -9,3 +9,4 @@ CLAUDE.local.md
 .superpowers/*
 openspec/*
 specs/*
+__pycache__/

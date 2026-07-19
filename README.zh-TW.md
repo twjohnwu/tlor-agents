@@ -1,7 +1,7 @@
 # TLOR Orchestration — 給 Claude Code 的中土遠征隊
 
 [![CI](https://github.com/twjohnwu/tlor-orchestration/actions/workflows/validate.yml/badge.svg)](https://github.com/twjohnwu/tlor-orchestration/actions/workflows/validate.yml)
-[![version](https://img.shields.io/badge/version-3.0.0-blue)](https://github.com/twjohnwu/tlor-orchestration/blob/main/.claude-plugin/plugin.json)
+[![version](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/twjohnwu/tlor-orchestration/blob/main/.claude-plugin/plugin.json)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 一個中土世界主題的 Claude Code 編排框架。九個固定職責的 subagent 角色，
@@ -87,20 +87,55 @@ base rule 檔案，升級前請把你的修改搬到 `rules/customize/`——下
 
 ## Skills
 
-| Skill | 用途 |
-|---|---|
-| `/rivendell-council` | 召集抗辯小組（三鏡頭，多數存活制判定）|
-| `/tlor-init` | 安裝 agents + rules + CLAUDE.md 路由 + AGENTS.md + 選配 hooks |
-| `/tlor-restore` | 從備份還原到先前的安裝狀態 |
+### 自動載入（隨 plugin/agents 一起安裝）
+
+| Skill | 用途 | 何時呼叫 |
+|---|---|---|
+| `/rivendell-council` | 召集抗辯小組（三鏡頭，多數存活制判定）| 不可逆操作、架構決策、根因判定、安全性判斷 |
+| `/tlor-init` | 安裝 agents + rules + CLAUDE.md 路由 + AGENTS.md + 選配 hooks | 首次設定，或升級既有安裝 |
+| `/tlor-restore` | 從備份還原到先前的安裝狀態 | 需要復原某次升級時 |
+| `/erebor-ledger` | 回溯性報表：tlor 角色派工省下多少 token/成本，依 Fable-5-orchestrator 與 Opus-orchestrator session 分開統計 | 「usage report」「cost savings report」「token ledger」——非單次進行中派工的即時估算 |
 
 **rivendell-council** — 抗辯小組的召集流程：組裝自足審查包、並行派遣三鏡頭、
 以多數存活制判定、關鍵結論循環至收斂。
 
 **tlor-init** — 一次性設定 skill：選安裝層級（使用者層/專案層/repo 層）、
 複製 agents 與 rules、產生 CLAUDE.md 路由與 AGENTS.md、選配啟用 hooks。
-偵測既有安裝並提供帶備份的升級流程。
+偵測既有安裝並提供帶備份的升級流程。也提供選配的 STDD 安裝步驟（見下）。
 
 **tlor-restore** — 從 `/tlor-init` 升級時建立的備份還原。
+
+**erebor-ledger** — 讀取既有的 Claude Code transcript，回報 tlor 角色派工
+相較於直接在 orchestrator 模型上跑同樣工作省下多少成本。僅回溯性報表，
+不是單次進行中派工的即時估算工具。
+
+### 選配：STDD 工作流程 skills（透過 `install.sh --stdd-role=ALL` 或 `/tlor-init` 的 STDD 步驟安裝）
+
+非自動載入——這七個 skill 實作 Spec-driven Test-Driven Development 流程，
+只有明確要求時才會落地到 `~/.claude/skills/`。本輪僅實作 `ALL` 這個
+profile；`RD`/`PM`/`UIUX` 角色限定子集 deferred（`install.sh
+--stdd-role=RD|PM|UIUX` 只會印出 deferred 訊息、不安裝任何東西）。
+
+| Skill | 中土稱號 | 用途 | 何時呼叫 |
+|---|---|---|---|
+| `/stdd` | Palantír 真知晶石 | 唯讀狀態儀表板：回報這個 STDD 變更目前在哪個階段、重新驗證 fingerprint、建議下一步指令 | 檢查進行中 STDD 變更的進度 |
+| `/stdd-explore` | Lore 智者探詢 | 在寫任何 spec 之前，先釐清模糊需求的思考夥伴階段 | 從一個粗略想法開始新的 STDD 變更 |
+| `/stdd-uiux` | Lórien 精靈美學 | 條件式設計階段，產生 `design-ux.md` | 僅當變更有使用者可見的 UI 介面時 |
+| `/stdd-spec` | Oath 遠征誓約 | 撰寫 GWT 格式 `spec.md`（含 test-mapping/verification-command 欄位）、以 `/stdd-lint` 自我複查、並以抗辯小組核准作為關卡 | 撰寫或核准某個 STDD 變更的 spec |
+| `/stdd-plan` | Map 行軍圖 | 從已核准的 spec 產生條件式的 `design-be.md`/`design-fe.md`/`api.yml` 與涵蓋所有情境的 `tasks.md` | 把已核准的 spec 轉成設計與任務清單 |
+| `/stdd-execute` | Forge 鑄造 | 對已核准的 `tasks.md` 逐任務跑 RED → GREEN → REFACTOR 迴圈，雙派工模型＋獨立驗證者 | 逐一實作 STDD 任務 |
+| `/stdd-lint` | Eagle Vision 鷹之視野 | 純規則式（非模型判斷）機械檢查：佔位字串洩漏、ID 連續性、GWT 完整性、test-mapping/涵蓋率、fingerprint 狀態 | 由 stdd-spec/stdd-plan/stdd-execute 的邊界檢查內部呼叫，使用者也可直接呼叫 |
+
+流程順序：`stdd-explore → stdd-uiux（條件式）→ stdd-spec → stdd-plan →
+stdd-execute`，`stdd` 與 `stdd-lint` 則任何階段都可呼叫。
+
+**STDD test-file guard hook**（`hooks/stdd_test_guard.py`）——選配的
+PreToolUse hook，強制已建立 RED baseline 的測試檔在其任務標記完成前不可
+再被改寫。透過 `install.sh --install-hook` 安裝（與 `--stdd-role` 無關）。
+**session-snapshot 誠實提醒**：Claude Code 只在 session 啟動時讀取一次
+`settings.json` 裡的 PreToolUse hook——若在既有 session 或
+`--continue`/`--resume` 的 session 中執行 `--install-hook`，該 hook 不會在
+那個 session 生效；請只在全新 session 中驗證。
 
 **觸發方式。** `/rivendell-council` 的自動叫用是由 description 驅動的——
 模型會拿 skill description 裡的觸發詞去比對當下情境。若要硬保證觸發，在
@@ -188,7 +223,7 @@ fail-then-pass 證據。任何內部錯誤一律 fail-open。
 
 ```bash
 git clone https://github.com/twjohnwu/tlor-orchestration.git
-cd tlor-orchestration && ./install.sh          # --dry-run / --force / --uninstall / --with-optional
+cd tlor-orchestration && ./install.sh          # --dry-run / --force / --uninstall / --with-optional / --stdd-role=ALL / --install-hook
 ```
 
 複製 agents 到 `~/.claude/agents/`、rules 到 `~/.claude/rules/`、hook 腳本到
@@ -197,6 +232,17 @@ cd tlor-orchestration && ./install.sh          # --dry-run / --force / --uninsta
 `--with-optional` 一併安裝 `rules/customize/` 裡的選裝 rules。寫入 manifest
 供 `--uninstall` 精確移除。Hook **啟用**（環境變數、`hooks.json` 接線）
 仍需走方式 A——`install.sh` 只負責放檔案。
+
+**`--stdd-role=RD|PM|UIUX|ALL`** — 選配安裝 STDD 工作流程 skills
+（`stdd-skills/*`，非自動載入；見上方 Skills 一節）。本輪僅實作 `ALL`；
+`RD`/`PM`/`UIUX` 只會印出 deferred 訊息、不安裝任何東西。不加此旗標 →
+不裝任何 STDD skill，與這個旗標出現前的行為相同。
+
+**`--install-hook`** — 選配安裝並在 `settings.json` 註冊 STDD test-file
+guard（`hooks/stdd_test_guard.py`）。預設不安裝。**誠實提醒**：Claude
+Code 只在 session 啟動時讀取一次 `settings.json` 裡的 PreToolUse
+hook——在既有或 `--continue`/`--resume` 的 session 中執行
+`--install-hook` 不會讓 hook 在那個 session 生效；請只在全新 session 中驗證。
 
 **輕量使用者**（只裝 plugin、不跑 `/tlor-init`）：在你專案的 CLAUDE.md
 加這段，不必完整安裝 rules 也能有派工紀律：

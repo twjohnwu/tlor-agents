@@ -1,7 +1,7 @@
 # TLOR Orchestration — a Middle-earth fellowship for Claude Code
 
 [![CI](https://github.com/twjohnwu/tlor-orchestration/actions/workflows/validate.yml/badge.svg)](https://github.com/twjohnwu/tlor-orchestration/actions/workflows/validate.yml)
-[![version](https://img.shields.io/badge/version-0.0.1-blue)](https://github.com/twjohnwu/tlor-orchestration/blob/main/.claude-plugin/plugin.json)
+[![version](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/twjohnwu/tlor-orchestration/blob/main/.claude-plugin/plugin.json)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 An orchestration framework for [Claude Code](https://code.claude.com), themed
@@ -113,11 +113,14 @@ role's pinned frontmatter.
 
 ## Skills
 
-| Skill | Purpose |
-|---|---|
-| `/rivendell-council` | Convene the adversarial panel (3 lenses, majority-survival verdict) |
-| `/tlor-init` | Install agents + rules + CLAUDE.md/AGENTS.md routing + optional hooks |
-| `/tlor-restore` | Rollback to a previous installation from backup |
+### Autoloaded (installed automatically with the plugin/agents)
+
+| Skill | Purpose | When to invoke |
+|---|---|---|
+| `/rivendell-council` | Convene the adversarial panel (3 lenses, majority-survival verdict) | Irreversible ops, architecture decisions, root-cause verdicts, security judgments |
+| `/tlor-init` | Install agents + rules + CLAUDE.md/AGENTS.md routing + optional hooks | First-time setup, or upgrading an existing installation |
+| `/tlor-restore` | Rollback to a previous installation from backup | An upgrade needs undoing |
+| `/erebor-ledger` | Retrospective token/cost-savings report for tlor role dispatching, split by Fable-5- vs Opus-orchestrator sessions | "usage report", "cost savings report", "token ledger" — not for live in-progress cost estimation |
 
 **rivendell-council** — the convening procedure for the adversarial panel:
 assemble a self-contained review package, dispatch the three lenses in
@@ -127,10 +130,46 @@ critical conclusions.
 **tlor-init** — one-time setup skill that installs the full framework:
 choose installation level (user/project/repo), copy agents and rules,
 generate CLAUDE.md and AGENTS.md routing, optionally enable hooks. Detects
-existing installations and offers upgrade with backup.
+existing installations and offers upgrade with backup. Also offers the STDD
+opt-in step (see below).
 
 **tlor-restore** — rollback from backups created by `/tlor-init` during
 upgrades.
+
+**erebor-ledger** — reads existing Claude Code transcripts and reports how
+much dispatching to tlor roles saved versus running the same work inline on
+the orchestrator model. Retrospective only; not a live estimator for a
+single in-progress dispatch.
+
+### Opt-in: STDD workflow skills (installed via `install.sh --stdd-role=ALL` or `/tlor-init`'s STDD step)
+
+Not autoloaded — these seven skills implement the Spec-driven Test-Driven
+Development pipeline and only land in `~/.claude/skills/` when explicitly
+requested. This round only the `ALL` profile is implemented; `RD`/`PM`/`UIUX`
+role-scoped subsets are deferred (`install.sh --stdd-role=RD|PM|UIUX` prints
+a deferred message and installs nothing).
+
+| Skill | Middle-earth title | Purpose | When to invoke |
+|---|---|---|---|
+| `/stdd` | Palantír 真知晶石 | Read-only status dashboard: reports which STDD stage a change is in, re-verifies the fingerprint, suggests the next command | Checking progress on an in-flight STDD change |
+| `/stdd-explore` | Lore 智者探詢 | Thinking-partner phase that clarifies a vague feature idea before any spec is written | Starting a new STDD change from a rough idea |
+| `/stdd-uiux` | Lórien 精靈美學 | Conditional design phase; generates `design-ux.md` | Only when the change has a user-facing UI surface |
+| `/stdd-spec` | Oath 遠征誓約 | Writes a GWT-format `spec.md` with test-mapping/verification-command fields, self-reviews via `/stdd-lint`, and gates on adversarial-panel approval | Writing or approving a spec for an STDD change |
+| `/stdd-plan` | Map 行軍圖 | Generates condition-based `design-be.md`/`design-fe.md`/`api.yml` and a scenario-covered `tasks.md` from an approved spec | Turning an approved spec into a design + task list |
+| `/stdd-execute` | Forge 鑄造 | Runs the per-task RED → GREEN → REFACTOR loop against an approved `tasks.md`, two-dispatch model with an independent verifier | Implementing STDD tasks one at a time |
+| `/stdd-lint` | Eagle Vision 鷹之視野 | Pure rule-based (non-model-judgment) mechanical checker: placeholder leakage, ID continuity, GWT completeness, test-mapping/coverage, fingerprint state | Called internally by stdd-spec/stdd-plan/stdd-execute's boundary checks, and directly by the user |
+
+Pipeline order: `stdd-explore → stdd-uiux (conditional) → stdd-spec →
+stdd-plan → stdd-execute`, with `stdd` and `stdd-lint` callable at any point.
+
+**STDD test-file guard hook** (`hooks/stdd_test_guard.py`) — an opt-in
+PreToolUse hook enforcing that a test file with an established RED baseline
+can't be rewritten before its task is marked done. Install with
+`install.sh --install-hook` (independent of `--stdd-role`). **Session-
+snapshot caveat**: Claude Code reads PreToolUse hooks from `settings.json`
+once, at session start — running `--install-hook` inside an existing or
+`--continue`/`--resume`d session will NOT activate the hook there; verify it
+in a brand-new session only.
 
 **Triggering.** Auto-invocation of `/rivendell-council` is description-driven
 — the model matches the skill description's trigger words against the
@@ -225,7 +264,7 @@ exists; check the repo's releases/version badge yourself.
 
 ```bash
 git clone https://github.com/twjohnwu/tlor-orchestration.git
-cd tlor-orchestration && ./install.sh          # --dry-run / --force / --uninstall / --with-optional
+cd tlor-orchestration && ./install.sh          # --dry-run / --force / --uninstall / --with-optional / --stdd-role=ALL / --install-hook
 ```
 
 Copies agents to `~/.claude/agents/`, rules to `~/.claude/rules/`, hook
@@ -235,6 +274,19 @@ model above). Add `--with-optional` to include the optional rules installed
 from `rules/customize/`. Records manifests for clean `--uninstall`. Hook
 *activation* (env vars, `hooks.json` wiring) still needs the plugin route
 (Option A) — `install.sh` only places the files.
+
+**`--stdd-role=RD|PM|UIUX|ALL`** — opt-in install of the STDD workflow
+skills (`stdd-skills/*`, non-autoload; see the Skills section above). Only
+`ALL` is implemented this round; `RD`/`PM`/`UIUX` print a deferred message
+and install nothing. No flag → no STDD skills, unchanged from before this
+flag existed.
+
+**`--install-hook`** — opt-in install + `settings.json` registration of the
+STDD test-file guard (`hooks/stdd_test_guard.py`). Default NOT installed.
+**Honest caveat**: Claude Code reads PreToolUse hooks from `settings.json`
+once, at session start — a resumed/continued session will NOT pick up a
+hook registered mid-session. Verify this hook in a brand-new (non-resumed)
+session only.
 
 **Lightweight users** (plugin only, no `/tlor-init`): add this to your
 project's `CLAUDE.md` to get dispatch discipline without the full rules
