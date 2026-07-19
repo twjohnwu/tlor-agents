@@ -1,7 +1,7 @@
 # TLOR Orchestration — a Middle-earth fellowship for Claude Code
 
 [![CI](https://github.com/twjohnwu/tlor-orchestration/actions/workflows/validate.yml/badge.svg)](https://github.com/twjohnwu/tlor-orchestration/actions/workflows/validate.yml)
-[![version](https://img.shields.io/badge/version-3.0.0-blue)](https://github.com/twjohnwu/tlor-orchestration/blob/main/.claude-plugin/plugin.json)
+[![version](https://img.shields.io/badge/version-0.0.1-blue)](https://github.com/twjohnwu/tlor-orchestration/blob/main/.claude-plugin/plugin.json)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 An orchestration framework for [Claude Code](https://code.claude.com), themed
@@ -33,6 +33,19 @@ which the installer never touches. If you had hand-edited a base rule file
 in place under 2.x, move your edits into `rules/customize/` before
 upgrading — the next install will overwrite the base file with the shipped
 version.
+
+## Versioning reset (3.0.0 → 0.0.1)
+
+This project has evolved through three architecture stages: (1) agents role
+base (1.x — nine pinned role definitions), (2) rule-assigned agents (2.x–3.0
+— roles wired to institution dispatch rules), (3) orchestration (0.x — a
+full orchestration framework; process pipelines such as STDD will be
+integrated). The repositioning restarts versioning at 0.0.1.
+
+Machines with 2.x/3.x installed will NOT receive the lower version via
+`/plugin marketplace update` (version downgrades are ignored per Claude
+Code's plugin version resolution). To migrate: uninstall the plugin, remove
+the marketplace, re-add the marketplace, then reinstall.
 
 ## Two ways to use this
 
