@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""erebor-ledger usage report — token/cost savings from tlor-agents dispatch.
+"""erebor-ledger usage report — token/cost savings from tlor-orchestration dispatch.
 
 Reads Claude Code transcript JSONL files (main-session + subagent) and
 answers two independent questions (per erebor-ledger spec §1/§3):
 
   1. When Fable 5 is the orchestrator, how much token/cost did dispatching
-     to tlor-agents save versus doing the work inline?
+     to tlor-orchestration save versus doing the work inline?
   2. Same question when any Opus version is the orchestrator?
 
 The two groups are reported and totalled SEPARATELY — they are never
@@ -449,7 +449,7 @@ def render_report(groups: dict, warnings: list, since: str | None) -> str:
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description=(
-            "erebor-ledger: report token/cost savings from tlor-agents dispatch, "
+            "erebor-ledger: report token/cost savings from tlor-orchestration dispatch, "
             "grouped by orchestrator model (Fable 5 vs Opus)."
         )
     )

@@ -41,7 +41,7 @@ recovering an interruption — see step 3). Route it:
 
 ## 2. Dispatch A — builder-RED (S-10)
 
-Dispatch a builder (role `gondor-builder` if tlor-agents/pinned roles are
+Dispatch a builder (role `gondor-builder` if tlor-orchestration/pinned roles are
 installed, otherwise a generic subagent with `model: sonnet` stated
 explicitly) with these exact instructions:
 
@@ -117,12 +117,12 @@ S-19):
 ## 4. Dispatch integration & fingerprint firewall (S-14)
 
 - Every scenario task uses exactly two dispatches (Dispatch A, Dispatch B
-  above); role selection: `gondor-builder` for both if tlor-agents (or an
+  above); role selection: `gondor-builder` for both if tlor-orchestration (or an
   equivalent pinned-role package) is installed, otherwise a generic
   subagent with `model: sonnet` stated explicitly.
 - **Independent verifier**, dispatched after Dispatch B (role
   `eagle-sentinel` with `model: sonnet` — the routine read-back override —
-  if tlor-agents is installed, otherwise a generic subagent with `model:
+  if tlor-orchestration is installed, otherwise a generic subagent with `model:
   sonnet` stated explicitly). The verifier does:
   - Accepts Dispatch A's quoted RED output as the RED evidence (RED
     evidence = Dispatch A's quote + the main session's checkpoint at that

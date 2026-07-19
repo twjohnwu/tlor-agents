@@ -1,6 +1,6 @@
 ---
 name: erebor-ledger
-description: 'Token/cost-savings ledger for tlor-agents dispatching — reports how much dispatching to tlor roles saved versus running the same work inline on the orchestrator model, split by Fable-5-orchestrator sessions vs Opus-orchestrator sessions. Triggers: "usage report", "cost savings report", "token ledger", "省了多少 token/成本", "how much token/cost saved", "dispatch savings". Not for live cost estimation of a single in-progress dispatch — this is a retrospective report over existing Claude Code transcripts.'
+description: 'Token/cost-savings ledger for tlor-orchestration dispatching — reports how much dispatching to tlor roles saved versus running the same work inline on the orchestrator model, split by Fable-5-orchestrator sessions vs Opus-orchestrator sessions. Triggers: "usage report", "cost savings report", "token ledger", "省了多少 token/成本", "how much token/cost saved", "dispatch savings". Not for live cost estimation of a single in-progress dispatch — this is a retrospective report over existing Claude Code transcripts.'
 ---
 
 # Erebor Ledger (寶庫清點 — dispatch token/cost savings report)
@@ -15,7 +15,7 @@ description: 'Token/cost-savings ledger for tlor-agents dispatching — reports 
 Answers two independent questions, never merged:
 
 1. When **Fable 5** is the orchestrator (main-session model), how much did
-   dispatching to tlor-agents save versus doing the work inline?
+   dispatching to tlor-orchestration save versus doing the work inline?
 2. When **any Opus version** (excluding Fable 5) is the orchestrator, what's
    the same answer?
 
