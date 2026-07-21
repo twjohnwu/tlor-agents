@@ -49,7 +49,7 @@ trusting a "clean" run.
 
 ```bash
 python3 skills/erebor-ledger/scripts/erebor_ledger.py [--project SUBSTR] \
-    [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--month YYYY-MM ...]
+    [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--month YYYY-MM ...] [--detail-others]
 ```
 
 - No flags: scans every project under `~/.claude/projects/` and its full
@@ -70,6 +70,12 @@ python3 skills/erebor-ledger/scripts/erebor_ledger.py [--project SUBSTR] \
   root directory — not part of the documented filters above, useful for
   running against a fixture directory instead of the real
   `~/.claude/projects/`.)
+- `--detail-others`: off by default (see the mandatory format below for the
+  default merged row). When set, breaks the merged `(other subagents)` row
+  into one row per distinct non-tlor-role `agentType` (built-in Explore,
+  `general-purpose`, plugin agents, ...), sorted by descending money saved
+  (unpriced rows last, alphabetical among themselves); Total saved is
+  unchanged either way.
 
 Python 3 standard library only — no `pip install` required.
 
@@ -106,39 +112,66 @@ record whether a cache write used the 5-minute or 1-hour cache tier, so
 every cache-write cost in this report is priced at the 5-minute tier. This
 is stated in the report output every run — never omit it.
 
+It also discloses an effort-source assumption: Claude Code transcripts
+don't record per-dispatch effort, so any `Effort` cell marked with a
+trailing `*` comes from the role's pinned frontmatter (`effort:` in
+`agents/<role>.md`), not an observed per-dispatch value. This is stated in
+the report output every run — never omit it. The same pinned frontmatter
+file also supplies the `model:` value a row's `Model` cell is compared
+against to decide the `(upgrade)`/`(downgrade)` marker described above.
+
 ## Per-role table (mandatory format — do not invent a different one)
 
 Every group (Fable / Opus) gets its own per-role table with this exact
 column set and order — this is the implementation contract, not a
 suggestion:
 
-| Role | Dispatches | input | output | cache(r/w) | Actual cost | Counterfactual cost | money saved | saved % |
-|---|---|---|---|---|---|---|---|---|
+| Role | Model | Effort | Dispatches | input | output | cache(r/w) | Actual cost | Counterfactual cost | money saved | saved % |
+|---|---|---|---|---|---|---|---|---|---|---|
+
+Rows are keyed by **(role, model, effort)**, not just role: a role
+dispatched with a per-call model/effort override (per
+`rules/dispatch.md` §3/§4 — e.g. an escalated retry) gets its own row,
+adjacent to that role's other rows, sorted by descending money saved.
+`Model` is the shortened `.message.model` id (`claude-` prefix and any
+trailing date snapshot suffix stripped, e.g. `claude-haiku-4-5-20251001` →
+`haiku-4-5`), suffixed with ` (upgrade)`/` (downgrade)` when the row's
+actual model family/tier (haiku < sonnet < opus < fable) differs from the
+role's pinned frontmatter `model:` — e.g. an `eagle-sentinel` row actually
+run on `sonnet-5` shows `sonnet-5 (downgrade)` because the role pins
+`opus`; same family regardless of version (pinned `opus` vs actual
+`opus-4-6`), no pin, or an unrecognized family on either side never gets a
+marker. `Effort` is a recorded per-dispatch value if one exists, else
+the role's pinned frontmatter marked with a trailing `*`, else `—`.
 
 The nine tlor roles (`rohirrim-outrider`, `ranger-pathfinder`,
 `noldor-loremaster`, `dwarf-smith`, `gondor-builder`, `eagle-sentinel`,
-`elf-archer`, `orc-saboteur`, `hobbit-gardener`) each get their own row when
-they appear in the data; anything else (built-in Explore, a generic
-subagent) is merged into a single `(other subagents)` row. The last row is
-always **Total saved**.
+`elf-archer`, `orc-saboteur`, `hobbit-gardener`) each get their own row(s)
+when they appear in the data; anything else (built-in Explore, a generic
+subagent) is merged into a single `(other subagents)` row by default —
+its `Model`/`Effort` cells show `mixed` unless every merged dispatch shares
+one value (`--detail-others` splits these out per agentType, each further
+split by model/effort like a tlor role). The last row is always
+**Total saved**, with `—` in its `Model`/`Effort` cells.
 
 ### Example (illustrative numbers — the format is the contract, the numbers are not)
 
 Fable group per-role example:
 
-| Role | Dispatches | input | output | cache(r/w) | Actual cost | Counterfactual cost | money saved | saved % |
-|---|---|---|---|---|---|---|---|---|
-| rohirrim-outrider | 12 | 8,400 | 2,100 | 15,000/3,200 | $0.42 | $3.10 | $2.68 | 86.5% |
-| ranger-pathfinder | 5 | 6,000 | 4,500 | 9,800/1,500 | $0.61 | $2.95 | $2.34 | 79.3% |
-| noldor-loremaster | 2 | 3,200 | 1,800 | 2,000/500 | $0.28 | $1.10 | $0.82 | 74.5% |
-| dwarf-smith | 3 | 4,100 | 3,000 | 5,600/900 | $0.35 | $1.85 | $1.50 | 81.1% |
-| gondor-builder | 4 | 9,000 | 6,200 | 12,000/2,100 | $0.90 | $4.20 | $3.30 | 78.6% |
-| eagle-sentinel | 6 | 7,500 | 3,900 | 8,000/1,200 | $0.55 | $2.80 | $2.25 | 80.4% |
-| elf-archer | 1 | 1,200 | 900 | 600/100 | $0.10 | $0.55 | $0.45 | 81.8% |
-| orc-saboteur | 1 | 1,300 | 950 | 700/100 | $0.11 | $0.58 | $0.47 | 81.0% |
-| hobbit-gardener | 1 | 1,100 | 800 | 500/100 | $0.09 | $0.50 | $0.41 | 82.0% |
-| (other subagents) | 2 | 2,000 | 1,000 | 1,000/200 | $0.15 | $0.70 | $0.55 | 78.6% |
-| **Total saved** | **37** | — | — | — | **$3.56** | **$18.33** | **$14.77** | **80.6%** |
+| Role | Model | Effort | Dispatches | input | output | cache(r/w) | Actual cost | Counterfactual cost | money saved | saved % |
+|---|---|---|---|---|---|---|---|---|---|---|
+| rohirrim-outrider | haiku-4-5 | low* | 12 | 8,400 | 2,100 | 15,000/3,200 | $0.42 | $3.10 | $2.68 | 86.5% |
+| ranger-pathfinder | sonnet-5 | low* | 5 | 6,000 | 4,500 | 9,800/1,500 | $0.61 | $2.95 | $2.34 | 79.3% |
+| noldor-loremaster | sonnet-5 | medium* | 2 | 3,200 | 1,800 | 2,000/500 | $0.28 | $1.10 | $0.82 | 74.5% |
+| dwarf-smith | sonnet-5 | low* | 3 | 4,100 | 3,000 | 5,600/900 | $0.35 | $1.85 | $1.50 | 81.1% |
+| gondor-builder | sonnet-5 | medium* | 4 | 9,000 | 6,200 | 12,000/2,100 | $0.90 | $4.20 | $3.30 | 78.6% |
+| eagle-sentinel | sonnet-5 (downgrade) | medium* | 5 | 6,500 | 3,200 | 7,000/1,000 | $0.48 | $2.40 | $1.92 | 80.0% |
+| eagle-sentinel | opus-4-8 | medium* | 1 | 1,000 | 700 | 1,000/200 | $0.07 | $0.40 | $0.33 | 82.5% |
+| elf-archer | opus-4-8 | medium* | 1 | 1,200 | 900 | 600/100 | $0.10 | $0.55 | $0.45 | 81.8% |
+| orc-saboteur | opus-4-8 | medium* | 1 | 1,300 | 950 | 700/100 | $0.11 | $0.58 | $0.47 | 81.0% |
+| hobbit-gardener | opus-4-8 | medium* | 1 | 1,100 | 800 | 500/100 | $0.09 | $0.50 | $0.41 | 82.0% |
+| (other subagents) | mixed | mixed | 2 | 2,000 | 1,000 | 1,000/200 | $0.15 | $0.70 | $0.55 | 78.6% |
+| **Total saved** | — | — | **37** | — | — | — | **$3.56** | **$18.33** | **$14.77** | **80.6%** |
 
 The Opus group's structure mirrors the table above exactly (same column
 order); its numbers are computed separately and not duplicated here.

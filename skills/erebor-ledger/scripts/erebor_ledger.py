@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime
@@ -48,6 +49,11 @@ CACHE_TIER_DISCLOSURE = (
     " used the 5m or 1h tier, so this report prices every cache write at the"
     " 5m tier; this is an assumption, not a measurement."
 )
+EFFORT_SOURCE_DISCLOSURE = (
+    "Effort values marked with `*` come from the role's pinned frontmatter"
+    " (`effort:` in agents/<role>.md), not a per-dispatch record — Claude"
+    " Code transcripts don't record per-dispatch effort."
+)
 
 TOKEN_FIELDS = ("input", "output", "cache_write", "cache_read")
 
@@ -55,6 +61,41 @@ DEFAULT_ROOT = os.path.expanduser("~/.claude/projects")
 PRICE_TABLE_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "references", "model-prices.json"
 )
+# Repo-relative agents/ dir next to this skill's plugin root (skills/erebor-ledger/scripts/ -> repo root/agents).
+PLUGIN_AGENTS_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "agents"
+)
+
+_MODEL_DATE_SUFFIX_RE = re.compile(r"-\d{8}$")
+
+MODEL_FAMILY_TIER = {"haiku": 0, "sonnet": 1, "opus": 2, "fable": 3}
+_MODEL_FAMILY_RE = re.compile(r"(haiku|sonnet|opus|fable)")
+
+
+def model_family(model: str | None) -> str | None:
+    """Extract the family token (haiku/sonnet/opus/fable) out of a model id
+    or a bare pinned-frontmatter value (e.g. `opus`, `claude-opus-4-8`,
+    `sonnet-5`). Returns None if no known family token is present."""
+    if not model:
+        return None
+    m = _MODEL_FAMILY_RE.search(model.lower())
+    return m.group(1) if m else None
+
+
+def short_model_id(model: str | None) -> str:
+    """Shorten a `.message.model` id for table display: strip the leading
+    `claude-` and a trailing date snapshot suffix like `-20251001`.
+
+    e.g. `claude-haiku-4-5-20251001` -> `haiku-4-5`; `claude-opus-4-8` (no
+    date suffix) -> `opus-4-8`.
+    """
+    if not model:
+        return "—"
+    m = model
+    if m.startswith("claude-"):
+        m = m[len("claude-"):]
+    m = _MODEL_DATE_SUFFIX_RE.sub("", m)
+    return m
 
 
 # --------------------------------------------------------------------------
@@ -223,14 +264,142 @@ def find_subagent_files(project_dir: str, session_id: str):
             yield agent_file, meta_file
 
 
-def load_agent_type(meta_file: str, warnings: list) -> str:
+def load_agent_meta(meta_file: str, warnings: list) -> dict:
+    """Returns {"agentType", "toolUseId", "effort"} — `effort` is only ever
+    populated if some future Claude Code version starts writing an
+    effort-like key into meta.json; as of this writing meta.json never
+    carries one (verified across this machine's full transcript corpus)."""
     try:
         with open(meta_file, "r", encoding="utf-8") as f:
             meta = json.load(f)
-        return meta.get("agentType") or OTHER_ROLE_LABEL
+        return {
+            "agentType": meta.get("agentType") or OTHER_ROLE_LABEL,
+            "toolUseId": meta.get("toolUseId"),
+            "effort": meta.get("effort") or meta.get("reasoningEffort"),
+        }
     except (OSError, json.JSONDecodeError):
         warnings.append(f"WARNING: missing/unreadable meta file {meta_file} — treated as {OTHER_ROLE_LABEL}")
-        return OTHER_ROLE_LABEL
+        return {"agentType": OTHER_ROLE_LABEL, "toolUseId": None, "effort": None}
+
+
+def extract_agent_tool_uses(session_path: str) -> dict:
+    """Scan a main-session transcript for `Agent` tool_use blocks, keyed by
+    tool_use id, so a dispatch's actual per-call `model`/`effort` override
+    (per rules/dispatch.md §3/§4) can be looked up via meta.json's
+    `toolUseId`. Returns {toolUseId: {"model": str|None, "effort": str|None}}.
+    """
+    result: dict = {}
+    try:
+        f = open(session_path, "r", encoding="utf-8")
+    except OSError:
+        return result
+    with f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if rec.get("type") != "assistant":
+                continue
+            content = (rec.get("message") or {}).get("content") or []
+            if not isinstance(content, list):
+                continue
+            for block in content:
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") != "tool_use" or block.get("name") != "Agent":
+                    continue
+                tool_id = block.get("id")
+                if not tool_id:
+                    continue
+                inp = block.get("input") or {}
+                result[tool_id] = {
+                    "model": inp.get("model"),
+                    "effort": inp.get("effort") or inp.get("reasoningEffort"),
+                }
+    return result
+
+
+_PINNED_FRONTMATTER_CACHE: dict = {}
+
+
+def load_pinned_frontmatter(agent_type: str) -> dict:
+    """Parse a role's pinned frontmatter, checking the user-level install
+    first, then the repo-relative plugin root next to this script. Returns
+    {"effort": str|None, "model": str|None}. Cached per agent_type (both
+    locations are static per run)."""
+    if agent_type in _PINNED_FRONTMATTER_CACHE:
+        return _PINNED_FRONTMATTER_CACHE[agent_type]
+    candidates = [
+        os.path.expanduser(f"~/.claude/agents/{agent_type}.md"),
+        os.path.join(PLUGIN_AGENTS_DIR, f"{agent_type}.md"),
+    ]
+    effort = None
+    model = None
+    for path in candidates:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                text = f.read()
+        except OSError:
+            continue
+        parts = text.split("---", 2)
+        frontmatter = parts[1] if len(parts) >= 3 else text
+        for line in frontmatter.splitlines():
+            line = line.strip()
+            if effort is None and line.startswith("effort:"):
+                effort = line.split(":", 1)[1].strip()
+            elif model is None and line.startswith("model:"):
+                model = line.split(":", 1)[1].strip()
+        if effort or model:
+            break
+    result = {"effort": effort, "model": model}
+    _PINNED_FRONTMATTER_CACHE[agent_type] = result
+    return result
+
+
+def load_pinned_effort(agent_type: str) -> str | None:
+    return load_pinned_frontmatter(agent_type)["effort"]
+
+
+def load_pinned_model(agent_type: str) -> str | None:
+    return load_pinned_frontmatter(agent_type)["model"]
+
+
+def model_marker(agent_type: str, model_cell: str) -> str:
+    """`` (upgrade)``/`` (downgrade)`` suffix for a row's Model cell, comparing
+    the row's actual model family/tier against the role's pinned frontmatter
+    `model:` (per rules/dispatch.md §3/§4 — a per-call override). Empty string
+    if the role has no pinned `model:`, or either side's family is unknown, or
+    both sides share the same family (version differences within a family,
+    e.g. pinned `opus` vs actual `opus-4-6`, are NOT a marker)."""
+    pinned = load_pinned_model(agent_type)
+    if not pinned:
+        return ""
+    pinned_family = model_family(pinned)
+    actual_family = model_family(model_cell)
+    pinned_tier = MODEL_FAMILY_TIER.get(pinned_family) if pinned_family else None
+    actual_tier = MODEL_FAMILY_TIER.get(actual_family) if actual_family else None
+    if pinned_tier is None or actual_tier is None or pinned_tier == actual_tier:
+        return ""
+    return " (upgrade)" if actual_tier > pinned_tier else " (downgrade)"
+
+
+def resolve_effort(meta_effort: str | None, tool_info: dict | None, agent_type: str) -> str:
+    """Priority order (spec §3): a recorded per-dispatch value (meta.json or
+    the matching Agent tool_use's effort field) as-is; else the role's
+    pinned frontmatter, marked with a trailing `*`; else `—`."""
+    recorded = meta_effort
+    if not recorded and tool_info:
+        recorded = tool_info.get("effort")
+    if recorded:
+        return str(recorded)
+    pinned = load_pinned_effort(agent_type)
+    if pinned:
+        return f"{pinned}*"
+    return "—"
 
 
 # --------------------------------------------------------------------------
@@ -302,39 +471,64 @@ def build_report(
                 g["orch_cost"] += cost_for_tokens(orch_tokens, orch_price)
                 g["orch_priced_sessions"] += 1
 
+            agent_tool_uses = extract_agent_tool_uses(session_path)
+
             for agent_file, meta_file in find_subagent_files(project_dir, session_id):
-                agent_type = load_agent_type(meta_file, warnings)
-                role = agent_type if agent_type in TLOR_ROLES else OTHER_ROLE_LABEL
+                meta = load_agent_meta(meta_file, warnings)
+                # Rows are keyed by (agent_type, model, effort) — not
+                # pre-merged into OTHER_ROLE_LABEL — so render_group can
+                # either merge non-tlor types into one row (default) or list
+                # them individually (--detail-others) from the same
+                # aggregated data, and so a role dispatched under a per-call
+                # model/effort override shows as its own row (spec §1).
+                role = meta["agentType"]
                 sub_records = list(iter_assistant_records(agent_file, since, until, month, warnings))
                 if not sub_records:
                     continue
 
-                row = g["roles"][role]
-                row["dispatches"] += 1
+                tool_info = agent_tool_uses.get(meta["toolUseId"]) if meta["toolUseId"] else None
+                effort_display = resolve_effort(meta["effort"], tool_info, role)
 
-                agent_tokens = zero_tokens()
-                actual_cost = 0.0
-                row_na = orch_price is None
+                # A dispatch's records are all one model in practice; if a
+                # transcript has several (e.g. a mid-dispatch escalation),
+                # split tokens/cost by each record's own model into separate
+                # rows, but count the dispatch itself once, against the
+                # model with the most records (mirrors the orchestrator's
+                # own most-common-model classification above).
+                model_counts = Counter(m for m, _ in sub_records)
+                dominant_model = model_counts.most_common(1)[0][0]
+
+                per_model_tokens: dict = {}
+                per_model_actual: dict = {}
+                per_model_na: dict = {}
                 for model, tok in sub_records:
-                    add_tokens(agent_tokens, tok)
+                    per_model_tokens.setdefault(model, zero_tokens())
+                    add_tokens(per_model_tokens[model], tok)
                     price = resolve_price(model, price_table, today)
                     if price is None:
-                        row_na = True
+                        per_model_na[model] = True
                         warnings.append(
                             f"WARNING: unpriced model '{model}' in {os.path.basename(agent_file)}"
                             f" (role {role}, project {project_name}) — cost N/A for this row"
                         )
                         continue
-                    actual_cost += cost_for_tokens(tok, price)
+                    per_model_actual[model] = per_model_actual.get(model, 0.0) + cost_for_tokens(tok, price)
 
-                add_tokens(row["tokens"], agent_tokens)
-                if row_na:
-                    row["na"] = True
-                else:
-                    row["actual_cost"] += actual_cost
-                    counterfactual = cost_for_tokens(agent_tokens, orch_price)
-                    row["counterfactual_cost"] += counterfactual
-                    g["project_saved"][project_name] += counterfactual - actual_cost
+                row_na_common = orch_price is None
+                for model, tok in per_model_tokens.items():
+                    key = (role, short_model_id(model), effort_display)
+                    row = g["roles"][key]
+                    if model == dominant_model:
+                        row["dispatches"] += 1
+                    add_tokens(row["tokens"], tok)
+                    if row_na_common or per_model_na.get(model, False):
+                        row["na"] = True
+                    else:
+                        actual = per_model_actual.get(model, 0.0)
+                        row["actual_cost"] += actual
+                        counterfactual = cost_for_tokens(tok, orch_price)
+                        row["counterfactual_cost"] += counterfactual
+                        g["project_saved"][project_name] += counterfactual - actual
 
     return groups, warnings
 
@@ -442,18 +636,117 @@ def render_month_comparison(months: list[str], month_groups: dict) -> str:
     return "\n".join(lines)
 
 
-def render_group(label: str, g: dict) -> str:
+def _group_keys_by_role(roles: dict) -> dict:
+    """Group the (role, model, effort)-keyed rows dict by role name,
+    preserving no particular order (callers sort/order separately)."""
+    grouped: dict = defaultdict(list)
+    for key in roles:
+        grouped[key[0]].append(key)
+    return grouped
+
+
+def _combo_sort_key(roles: dict):
+    """Sort a role's (role, model, effort) combo rows: descending money
+    saved, unpriced/N-A rows last, then by model/effort for determinism."""
+
+    def key(k):
+        row = roles[k]
+        if row["na"]:
+            return (1, k[1], k[2])
+        saved = row["counterfactual_cost"] - row["actual_cost"]
+        return (0, -saved, k[1], k[2])
+
+    return key
+
+
+def _role_aggregate_sort_key(roles: dict, keys: list) -> tuple:
+    """(is_na_or_unpriced, -total_saved) for ordering non-tlor roles by their
+    combined money saved across all of that role's (model, effort) rows."""
+    total_actual = 0.0
+    total_cf = 0.0
+    any_na = False
+    any_priced = False
+    for k in keys:
+        row = roles[k]
+        if row["na"]:
+            any_na = True
+        else:
+            any_priced = True
+            total_actual += row["actual_cost"]
+            total_cf += row["counterfactual_cost"]
+    if not any_priced:
+        return (1, 0.0)
+    return (0, -(total_cf - total_actual))
+
+
+def _other_role_sort_key(roles: dict, grouped: dict):
+    """Sort non-tlor role names for --detail-others: descending money saved
+    (aggregated across each role's model/effort combos), unpriced last,
+    alphabetical among themselves."""
+
+    def key(name):
+        na_flag, neg_saved = _role_aggregate_sort_key(roles, grouped[name])
+        return (na_flag, neg_saved, name)
+
+    return key
+
+
+def merge_other_rows(roles: dict, other_keys: list) -> dict:
+    """Collapse several non-tlor (role, model, effort) rows into the single
+    default "(other subagents)" row (default, non-detail-others rendering).
+
+    Tokens/dispatches always sum; `na` is sticky — if ANY constituent row is
+    unpriced, the whole merged row reports N/A. Model/Effort cells show the
+    shared value if every constituent combo agrees, else `mixed` (spec §4).
+    """
+    merged = new_role_row()
+    models = set()
+    efforts = set()
+    for key in other_keys:
+        row = roles[key]
+        merged["dispatches"] += row["dispatches"]
+        add_tokens(merged["tokens"], row["tokens"])
+        if row["na"]:
+            merged["na"] = True
+        else:
+            merged["actual_cost"] += row["actual_cost"]
+            merged["counterfactual_cost"] += row["counterfactual_cost"]
+        models.add(key[1])
+        efforts.add(key[2])
+    merged["model"] = next(iter(models)) if len(models) == 1 else "mixed"
+    merged["effort"] = next(iter(efforts)) if len(efforts) == 1 else "mixed"
+    return merged
+
+
+def render_group(label: str, g: dict, detail_others: bool = False) -> str:
     lines = []
     lines.append(f"## {label} group per-role table")
     lines.append("")
     lines.append(
-        "| Role | Dispatches | input | output | cache(r/w) | Actual cost | Counterfactual cost | money saved | saved % |"
+        "| Role | Model | Effort | Dispatches | input | output | cache(r/w) | Actual cost | "
+        "Counterfactual cost | money saved | saved % |"
     )
-    lines.append("|---|---|---|---|---|---|---|---|---|")
+    lines.append("|---|---|---|---|---|---|---|---|---|---|---|")
 
-    ordered_roles = [r for r in TLOR_ROLES if r in g["roles"]]
-    if OTHER_ROLE_LABEL in g["roles"]:
-        ordered_roles.append(OTHER_ROLE_LABEL)
+    grouped = _group_keys_by_role(g["roles"])
+    ordered_roles = [r for r in TLOR_ROLES if r in grouped]
+    other_role_names = [r for r in grouped if r not in TLOR_ROLES]
+
+    # render_rows: list of (role_label, model_cell, effort_cell, row_dict)
+    render_rows = []
+    for role in ordered_roles:
+        for key in sorted(grouped[role], key=_combo_sort_key(g["roles"])):
+            render_rows.append((role, key[1], key[2], g["roles"][key]))
+
+    if other_role_names:
+        if detail_others:
+            for role in sorted(other_role_names, key=_other_role_sort_key(g["roles"], grouped)):
+                for key in sorted(grouped[role], key=_combo_sort_key(g["roles"])):
+                    render_rows.append((role, key[1], key[2], g["roles"][key]))
+        else:
+            other_keys = [k for role in other_role_names for k in grouped[role]]
+            merged = merge_other_rows(g["roles"], other_keys)
+            render_rows.append((OTHER_ROLE_LABEL, merged["model"], merged["effort"], merged))
 
     total_dispatches = 0
     total_actual = 0.0
@@ -461,15 +754,19 @@ def render_group(label: str, g: dict) -> str:
     any_na = False
     any_priced = False
 
-    for role in ordered_roles:
-        row = g["roles"][role]
+    for role, model_cell, effort_cell, row in render_rows:
         total_dispatches += row["dispatches"]
+        # (upgrade)/(downgrade) markers are per-row only — never on the merged
+        # "(other subagents)" row (its Model cell may be `mixed`) or the Total row.
+        if role != OTHER_ROLE_LABEL:
+            model_cell = model_cell + model_marker(role, model_cell)
         cache_cell = f"{fmt_int(row['tokens']['cache_read'])}/{fmt_int(row['tokens']['cache_write'])}"
         if row["na"]:
             any_na = True
             lines.append(
-                f"| {role} | {row['dispatches']} | {fmt_int(row['tokens']['input'])} | "
-                f"{fmt_int(row['tokens']['output'])} | {cache_cell} | N/A | N/A | N/A | N/A |"
+                f"| {role} | {model_cell} | {effort_cell} | {row['dispatches']} | "
+                f"{fmt_int(row['tokens']['input'])} | {fmt_int(row['tokens']['output'])} | "
+                f"{cache_cell} | N/A | N/A | N/A | N/A |"
             )
         else:
             any_priced = True
@@ -477,8 +774,9 @@ def render_group(label: str, g: dict) -> str:
             total_actual += row["actual_cost"]
             total_counterfactual += row["counterfactual_cost"]
             lines.append(
-                f"| {role} | {row['dispatches']} | {fmt_int(row['tokens']['input'])} | "
-                f"{fmt_int(row['tokens']['output'])} | {cache_cell} | {fmt_money(row['actual_cost'])} | "
+                f"| {role} | {model_cell} | {effort_cell} | {row['dispatches']} | "
+                f"{fmt_int(row['tokens']['input'])} | {fmt_int(row['tokens']['output'])} | "
+                f"{cache_cell} | {fmt_money(row['actual_cost'])} | "
                 f"{fmt_money(row['counterfactual_cost'])} | {fmt_money(saved)} | "
                 f"{fmt_pct(saved, row['counterfactual_cost'])} |"
             )
@@ -496,7 +794,7 @@ def render_group(label: str, g: dict) -> str:
         total_saved = None
         total_actual_cell = total_counterfactual_cell = total_saved_cell = total_pct_cell = "N/A"
     lines.append(
-        f"| **Total saved** {partial_note} | **{total_dispatches}** | — | — | — | "
+        f"| **Total saved** {partial_note} | — | — | **{total_dispatches}** | — | — | — | "
         f"**{total_actual_cell}** | **{total_counterfactual_cell}** | "
         f"**{total_saved_cell}** | **{total_pct_cell}** |"
     )
@@ -541,17 +839,20 @@ def filter_description(since: str | None, until: str | None, month: str | None) 
     return " ".join(parts) + " (per the transcript's own `timestamp` field)"
 
 
-def render_report(groups: dict, warnings: list, filter_desc: str | None) -> str:
+def render_report(
+    groups: dict, warnings: list, filter_desc: str | None, detail_others: bool = False
+) -> str:
     lines = []
     lines.append("# erebor-ledger usage report")
     lines.append("")
     lines.append(f"> {COUNTERFACTUAL_DISCLOSURE}")
     lines.append(f"> {CACHE_TIER_DISCLOSURE}")
+    lines.append(f"> {EFFORT_SOURCE_DISCLOSURE}")
     if filter_desc:
         lines.append(f"> Filter: {filter_desc}")
     lines.append("")
-    lines.append(render_group("Fable", groups["fable"]))
-    lines.append(render_group("Opus", groups["opus"]))
+    lines.append(render_group("Fable", groups["fable"], detail_others))
+    lines.append(render_group("Opus", groups["opus"], detail_others))
 
     if warnings:
         lines.append("## Warnings")
@@ -603,6 +904,15 @@ def main(argv=None):
             f"(default: {DEFAULT_ROOT})"
         ),
     )
+    parser.add_argument(
+        "--detail-others",
+        action="store_true",
+        help=(
+            "break the merged \"(other subagents)\" row out into one row per "
+            "distinct non-tlor-role agentType (built-in Explore, general-purpose, "
+            "plugin agents, ...), sorted by descending money saved (unpriced rows last)"
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.month and (args.since or args.until):
@@ -615,13 +925,21 @@ def main(argv=None):
 
     if not args.month:
         groups, warnings = build_report(root, args.project, args.since, args.until, None, price_table, today)
-        print(render_report(groups, warnings, filter_description(args.since, args.until, None)))
+        print(
+            render_report(
+                groups, warnings, filter_description(args.since, args.until, None), args.detail_others
+            )
+        )
         return 0
 
     months = args.month
     if len(months) == 1:
         groups, warnings = build_report(root, args.project, None, None, months[0], price_table, today)
-        print(render_report(groups, warnings, filter_description(None, None, months[0])))
+        print(
+            render_report(
+                groups, warnings, filter_description(None, None, months[0]), args.detail_others
+            )
+        )
         return 0
 
     # Multiple --month values: one run, one pass per month over the same
@@ -638,6 +956,7 @@ def main(argv=None):
     sections.append("")
     sections.append(f"> {COUNTERFACTUAL_DISCLOSURE}")
     sections.append(f"> {CACHE_TIER_DISCLOSURE}")
+    sections.append(f"> {EFFORT_SOURCE_DISCLOSURE}")
     sections.append(
         f"> Filter: --month {', '.join(months)} (per the transcript's own `timestamp` field;"
         " multi-month comparison, single run)"
@@ -646,8 +965,8 @@ def main(argv=None):
     for m in months:
         sections.append(f"# Month: {m}")
         sections.append("")
-        sections.append(render_group(f"Fable ({m})", month_groups[m]["fable"]))
-        sections.append(render_group(f"Opus ({m})", month_groups[m]["opus"]))
+        sections.append(render_group(f"Fable ({m})", month_groups[m]["fable"], args.detail_others))
+        sections.append(render_group(f"Opus ({m})", month_groups[m]["opus"], args.detail_others))
     sections.append(render_month_comparison(months, month_groups))
 
     if all_warnings:
