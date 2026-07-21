@@ -6,6 +6,17 @@ English only — this file has no zh-TW mirror. Reconstructed from
 `git log --oneline` and `AGENTS.local.md`'s version/incident records. Newest
 release first — new sections go at the top.
 
+## v0.1.5 — 2026-07-21
+
+- `/tlor-init` Step 5 now offers the `rules/customize/judgment.md` seed
+  during install (functional omission from v0.1.3 — the installer skill
+  never asked about it).
+- Docs catch-up for v0.1.3: rules-and-hooks (en/zh-TW) optional table
+  lists the judgment.md seed (6 files, was 5); both READMEs' autoloaded
+  skills table gains the `/westmarch-scribe` row.
+- README version badges switched from a hardcoded static badge (stuck at
+  0.1.2) to a shields.io dynamic JSON badge reading plugin.json's version.
+
 ## v0.1.4 — 2026-07-21
 
 - erebor-ledger: `--detail-others` flag breaks the merged `(other

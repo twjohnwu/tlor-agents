@@ -107,6 +107,10 @@ plugin bundle:
 
 - **design-principles.md** — 7 fallback principles for uncovered cases (P1-P7)
 - **user-decision-patterns.md** — 3 decision patterns for AI-assisted development (D1-D3)
+- **customize/judgment.md** — compact-MADR candidate-comparison format plus
+  a "General decisions log" section that accumulates the user's
+  cross-project decisions; base `rules/judgment.md` §5 carries a
+  conditional pointer to it.
 - **customize/letter-to-future-sessions.md** — a blank template the user
   fills in over time (non-obvious project facts, decay countermeasures,
   honest limits); ships empty on purpose.
