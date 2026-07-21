@@ -125,13 +125,24 @@ def cost_for_tokens(tokens: dict, price_entry: dict | None) -> float | None:
 # Transcript walking
 # --------------------------------------------------------------------------
 
-def iter_assistant_records(path: str, since: str | None, warnings: list):
+def iter_assistant_records(
+    path: str,
+    since: str | None,
+    until: str | None,
+    month: str | None,
+    warnings: list,
+):
     """Yield (model, tokens) for each non-synthetic assistant record.
 
     Timestamp filtering: transcripts on this machine reliably carry a
     top-level ISO `timestamp` field (spec §7 requires confirming this before
-    relying on it). A record missing `timestamp` while --since is active is
-    excluded (fail closed) rather than silently included, and warned once.
+    relying on it). A record missing `timestamp` while any date filter
+    (--since/--until/--month) is active is excluded (fail closed) rather
+    than silently included, and warned once.
+
+    `month` (YYYY-MM) is mutually exclusive with since/until — callers
+    enforce that before this point; when `month` is set it is the only
+    filter applied.
     """
     try:
         f = open(path, "r", encoding="utf-8")
@@ -152,17 +163,23 @@ def iter_assistant_records(path: str, since: str | None, warnings: list):
             model = message.get("model")
             if model == SYNTHETIC_MODEL:
                 continue
-            if since is not None:
+            if since is not None or until is not None or month is not None:
                 ts = rec.get("timestamp")
                 if not ts:
                     warnings.append(
-                        f"WARNING: record without timestamp in {path} excluded under --since"
+                        f"WARNING: record without timestamp in {path} excluded under date filter"
                         " (transcript timestamp field assumed reliable on this machine;"
                         " see spec §7 mtime-fallback clause)"
                     )
                     continue
-                if ts[:10] < since:
-                    continue
+                if month is not None:
+                    if ts[:7] != month:
+                        continue
+                else:
+                    if since is not None and ts[:10] < since:
+                        continue
+                    if until is not None and ts[:10] > until:
+                        continue
             usage = message.get("usage") or {}
             yield model, usage_to_tokens(usage)
 
@@ -242,13 +259,21 @@ def new_role_row() -> dict:
     }
 
 
-def build_report(root: str, project_filter: str | None, since: str | None, price_table: dict, today: str):
+def build_report(
+    root: str,
+    project_filter: str | None,
+    since: str | None,
+    until: str | None,
+    month: str | None,
+    price_table: dict,
+    today: str,
+):
     warnings: list[str] = []
     groups = {"fable": new_group_state(), "opus": new_group_state()}
 
     for project_name, project_dir in find_project_dirs(root, project_filter):
         for session_id, session_path in find_main_sessions(project_dir):
-            main_records = list(iter_assistant_records(session_path, since, warnings))
+            main_records = list(iter_assistant_records(session_path, since, until, month, warnings))
             if not main_records:
                 continue
 
@@ -280,7 +305,7 @@ def build_report(root: str, project_filter: str | None, since: str | None, price
             for agent_file, meta_file in find_subagent_files(project_dir, session_id):
                 agent_type = load_agent_type(meta_file, warnings)
                 role = agent_type if agent_type in TLOR_ROLES else OTHER_ROLE_LABEL
-                sub_records = list(iter_assistant_records(agent_file, since, warnings))
+                sub_records = list(iter_assistant_records(agent_file, since, until, month, warnings))
                 if not sub_records:
                     continue
 
@@ -332,6 +357,89 @@ def fmt_pct(saved: float | None, counterfactual: float | None) -> str:
     if saved is None or counterfactual is None or counterfactual == 0:
         return "N/A"
     return f"{saved / counterfactual * 100:.1f}%"
+
+
+def group_totals(g: dict):
+    """Aggregate a group's per-role rows into (dispatches, actual, counterfactual, any_na).
+
+    `actual`/`counterfactual` are None when no row in the group was priced
+    (mirrors render_group's own "don't print $0.00 for unknown" rule).
+    Used by the cross-month comparison table — kept separate from
+    render_group's inline accumulation so that function's tested output for
+    the non-month path is untouched.
+    """
+    total_dispatches = 0
+    total_actual = 0.0
+    total_counterfactual = 0.0
+    any_na = False
+    any_priced = False
+    for row in g["roles"].values():
+        total_dispatches += row["dispatches"]
+        if row["na"]:
+            any_na = True
+        else:
+            any_priced = True
+            total_actual += row["actual_cost"]
+            total_counterfactual += row["counterfactual_cost"]
+    if any_priced:
+        return total_dispatches, total_actual, total_counterfactual, any_na
+    return total_dispatches, None, None, any_na
+
+
+def render_month_comparison(months: list[str], month_groups: dict) -> str:
+    """Cross-month comparison table: one column per month, Fable+Opus combined.
+
+    Combining the two orchestrator groups here is a deliberate narrowing of
+    scope from the per-month sections (which keep Fable/Opus separate per
+    spec §1/§3) — this table answers a different question ("how did total
+    spend/savings move month to month"), where summing already-computed
+    dollar totals does not blend unit prices the way averaging a rate would.
+    """
+    lines = []
+    lines.append("## Cross-month comparison")
+    lines.append("")
+
+    combined = {}
+    for m in months:
+        g = month_groups[m]
+        fd, fa, fc, f_na = group_totals(g["fable"])
+        od, oa, oc, o_na = group_totals(g["opus"])
+        actual = None if (fa is None and oa is None) else (fa or 0.0) + (oa or 0.0)
+        counterfactual = None if (fc is None and oc is None) else (fc or 0.0) + (oc or 0.0)
+        saved = None if (actual is None or counterfactual is None) else counterfactual - actual
+        combined[m] = {
+            "sessions": g["fable"]["sessions"] + g["opus"]["sessions"],
+            "dispatches": fd + od,
+            "actual": actual,
+            "counterfactual": counterfactual,
+            "saved": saved,
+            "any_na": f_na or o_na,
+        }
+
+    header = "| Metric | " + " | ".join(months) + " |"
+    sep = "|---|" + "---|" * len(months)
+    lines.append(header)
+    lines.append(sep)
+    lines.append("| Sessions | " + " | ".join(str(combined[m]["sessions"]) for m in months) + " |")
+    lines.append("| Dispatch count | " + " | ".join(str(combined[m]["dispatches"]) for m in months) + " |")
+    lines.append("| Actual cost | " + " | ".join(fmt_money(combined[m]["actual"]) for m in months) + " |")
+    lines.append(
+        "| Counterfactual cost | " + " | ".join(fmt_money(combined[m]["counterfactual"]) for m in months) + " |"
+    )
+    lines.append("| Saved | " + " | ".join(fmt_money(combined[m]["saved"]) for m in months) + " |")
+    lines.append(
+        "| Saved % | "
+        + " | ".join(fmt_pct(combined[m]["saved"], combined[m]["counterfactual"]) for m in months)
+        + " |"
+    )
+    lines.append("")
+    if any(combined[m]["any_na"] for m in months):
+        lines.append(
+            "(Note: at least one month has an unpriced model in its per-month section above —"
+            " this comparison's actual/counterfactual/saved figures for that month are partial.)"
+        )
+        lines.append("")
+    return "\n".join(lines)
 
 
 def render_group(label: str, g: dict) -> str:
@@ -420,14 +528,27 @@ def render_group(label: str, g: dict) -> str:
     return "\n".join(lines)
 
 
-def render_report(groups: dict, warnings: list, since: str | None) -> str:
+def filter_description(since: str | None, until: str | None, month: str | None) -> str | None:
+    if month:
+        return f"--month {month} (per the transcript's own `timestamp` field)"
+    parts = []
+    if since:
+        parts.append(f"--since {since}")
+    if until:
+        parts.append(f"--until {until}")
+    if not parts:
+        return None
+    return " ".join(parts) + " (per the transcript's own `timestamp` field)"
+
+
+def render_report(groups: dict, warnings: list, filter_desc: str | None) -> str:
     lines = []
     lines.append("# erebor-ledger usage report")
     lines.append("")
     lines.append(f"> {COUNTERFACTUAL_DISCLOSURE}")
     lines.append(f"> {CACHE_TIER_DISCLOSURE}")
-    if since:
-        lines.append(f"> Filter: --since {since} (per the transcript's own `timestamp` field)")
+    if filter_desc:
+        lines.append(f"> Filter: {filter_desc}")
     lines.append("")
     lines.append(render_group("Fable", groups["fable"]))
     lines.append(render_group("Opus", groups["opus"]))
@@ -462,6 +583,20 @@ def main(argv=None):
         help="YYYY-MM-DD; only include records at or after this date (transcript timestamp)",
     )
     parser.add_argument(
+        "--until",
+        help="YYYY-MM-DD; only include records at or before this date (transcript timestamp)",
+    )
+    parser.add_argument(
+        "--month",
+        action="append",
+        help=(
+            "YYYY-MM; only include records in this month (transcript timestamp). Repeatable —"
+            " passing it more than once produces a per-month section for each plus a"
+            " cross-month comparison table, all in one run. Mutually exclusive with"
+            " --since/--until."
+        ),
+    )
+    parser.add_argument(
         "--root",
         help=(
             "advanced/testing only: override the transcripts root directory "
@@ -470,13 +605,59 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
 
+    if args.month and (args.since or args.until):
+        print("error: --month cannot be combined with --since/--until", file=sys.stderr)
+        return 1
+
     root = os.path.expanduser(args.root) if args.root else DEFAULT_ROOT
     price_table = load_price_table()
     today = datetime.now().strftime("%Y-%m-%d")
 
-    groups, warnings = build_report(root, args.project, args.since, price_table, today)
-    print(render_report(groups, warnings, args.since))
+    if not args.month:
+        groups, warnings = build_report(root, args.project, args.since, args.until, None, price_table, today)
+        print(render_report(groups, warnings, filter_description(args.since, args.until, None)))
+        return 0
 
+    months = args.month
+    if len(months) == 1:
+        groups, warnings = build_report(root, args.project, None, None, months[0], price_table, today)
+        print(render_report(groups, warnings, filter_description(None, None, months[0])))
+        return 0
+
+    # Multiple --month values: one run, one pass per month over the same
+    # transcripts, per-month sections plus a combined comparison table.
+    month_groups: dict[str, dict] = {}
+    all_warnings: list[str] = []
+    for m in months:
+        g, w = build_report(root, args.project, None, None, m, price_table, today)
+        month_groups[m] = g
+        all_warnings.extend(w)
+
+    sections = []
+    sections.append("# erebor-ledger usage report")
+    sections.append("")
+    sections.append(f"> {COUNTERFACTUAL_DISCLOSURE}")
+    sections.append(f"> {CACHE_TIER_DISCLOSURE}")
+    sections.append(
+        f"> Filter: --month {', '.join(months)} (per the transcript's own `timestamp` field;"
+        " multi-month comparison, single run)"
+    )
+    sections.append("")
+    for m in months:
+        sections.append(f"# Month: {m}")
+        sections.append("")
+        sections.append(render_group(f"Fable ({m})", month_groups[m]["fable"]))
+        sections.append(render_group(f"Opus ({m})", month_groups[m]["opus"]))
+    sections.append(render_month_comparison(months, month_groups))
+
+    if all_warnings:
+        sections.append("## Warnings")
+        sections.append("")
+        for w in all_warnings:
+            sections.append(f"- {w}")
+        sections.append("")
+
+    print("\n".join(sections))
     return 0
 
 

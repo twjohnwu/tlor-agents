@@ -115,6 +115,20 @@ Old-name (`tlor-agents`) residue cleanup, marketplace description sync, and
 this README split into a `docs/` tree (this file included) to keep both
 root READMEs short.
 
+## v0.1.3 — 2026-07-21
+
+- erebor-ledger: new `--until YYYY-MM-DD` upper bound and repeatable
+  `--month YYYY-MM` (single-month reports and multi-month comparison in ONE
+  script run; `--month` is mutually exclusive with `--since`/`--until`).
+- New customize seed `rules/customize/judgment.md`: compact-MADR
+  candidate-comparison format + general decisions log (copy-if-absent,
+  never overwritten on upgrade). Base judgment.md §5 gains a one-line
+  conditional pointer.
+- New skill `westmarch-scribe` (decision capture): archives a filled MADR
+  to the project decision log / instruction file / general decisions log,
+  AskUserQuestion-driven. Advisory closing hook added to
+  stdd-explore / stdd-uiux / stdd-spec / stdd-plan.
+
 ## v0.1.2 — 2026-07-20
 
 Skill-body refinements from the first skill-creator evaluation round

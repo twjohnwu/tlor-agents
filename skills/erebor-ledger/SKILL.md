@@ -48,7 +48,8 @@ trusting a "clean" run.
 ## How to run it
 
 ```bash
-python3 skills/erebor-ledger/scripts/erebor_ledger.py [--project SUBSTR] [--since YYYY-MM-DD]
+python3 skills/erebor-ledger/scripts/erebor_ledger.py [--project SUBSTR] \
+    [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--month YYYY-MM ...]
 ```
 
 - No flags: scans every project under `~/.claude/projects/` and its full
@@ -56,10 +57,19 @@ python3 skills/erebor-ledger/scripts/erebor_ledger.py [--project SUBSTR] [--sinc
 - `--project <substring>`: only includes project directories whose name
   contains this substring.
 - `--since YYYY-MM-DD`: only includes records at or after this date, using
-  the transcript's own `timestamp` field. (`--root` also exists as an
-  advanced/testing override of the transcripts root directory — not part
-  of the two documented filters above, useful for running against a fixture
-  directory instead of the real `~/.claude/projects/`.)
+  the transcript's own `timestamp` field.
+- `--until YYYY-MM-DD`: only includes records at or before this date, same
+  field. Combine with `--since` for a closed date window; both bounds are
+  inclusive.
+- `--month YYYY-MM`: only includes records in that month, using the
+  transcript timestamp's UTC calendar date (i.e. the month boundary is
+  `ts[:7]` of that same `timestamp` field, not local time). Repeatable —
+  pass it more than once for a multi-month comparison; mutually exclusive
+  with `--since`/`--until` (the script errors out if both are given).
+  (`--root` also exists as an advanced/testing override of the transcripts
+  root directory — not part of the documented filters above, useful for
+  running against a fixture directory instead of the real
+  `~/.claude/projects/`.)
 
 Python 3 standard library only — no `pip install` required.
 
@@ -69,6 +79,10 @@ hand in the prose. Transcripts grow while a session is live (including from
 the very dispatches producing this report), so two runs minutes apart give
 slightly different totals; a report whose prose disagrees with its own
 quoted raw output reads as fabricated even when both numbers were real.
+This applies to multi-month comparisons too: passing `--month` more than
+once produces every month's section PLUS the cross-month comparison table
+inside that SAME single run — never stitch together separate single-month
+runs by hand.
 
 ## Savings methodology
 

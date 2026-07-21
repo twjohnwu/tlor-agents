@@ -38,6 +38,7 @@ profile；`RD`/`PM`/`UIUX` 角色限定子集 deferred（`install.sh
 | `/stdd-plan` | Map 行軍圖 | 從已核准的 spec 產生條件式的 `design-be.md`/`design-fe.md`/`api.yml` 與涵蓋所有情境的 `tasks.md` | 把已核准的 spec 轉成設計與任務清單 |
 | `/stdd-execute` | Forge 鑄造 | 對已核准的 `tasks.md` 逐任務跑 RED → GREEN → REFACTOR 迴圈，雙派工模型＋獨立驗證者 | 逐一實作 STDD 任務 |
 | `/stdd-lint` | Eagle Vision 鷹之視野 | 純規則式（非模型判斷）機械檢查：佔位字串洩漏、ID 連續性、GWT 完整性、test-mapping/涵蓋率、fingerprint 狀態 | 由 stdd-spec/stdd-plan/stdd-execute 的邊界檢查內部呼叫，使用者也可直接呼叫 |
+| `/westmarch-scribe` | Westmarch 記事錄 | westmarch-scribe — 決策歸檔：將已填 Outcome 的精簡 MADR 決策寫入專案 decision log（或 instruction 檔、通用決策紀錄） | 由 stdd-explore/stdd-uiux/stdd-spec/stdd-plan 的建議性收尾步驟呼叫，使用者也可直接呼叫 |
 
 流程順序：`stdd-explore → stdd-uiux（條件式）→ stdd-spec → stdd-plan →
 stdd-execute`，`stdd` 與 `stdd-lint` 則任何階段都可呼叫。

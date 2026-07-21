@@ -11,3 +11,4 @@ openspec/*
 specs/*
 __pycache__/
 skill-creator-workspace/
+.DS_Store

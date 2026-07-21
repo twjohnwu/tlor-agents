@@ -114,6 +114,9 @@ than fake confidence.** The ceiling on above-the-floor judgment is the
 reviewing model's own taste; no checklist raises it further, so be honest
 about the limit instead of projecting false confidence.
 
+For the output format of those 2–3 candidates, see
+rules/customize/judgment.md if installed (compact MADR).
+
 ## 5b. Minimum check per artifact type
 
 The quality floor above is a checklist; this table is the minimum verification
