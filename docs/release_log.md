@@ -19,6 +19,11 @@ release first — new sections go at the top.
 - erebor-ledger SKILL.md: added a closing "Before you report" checklist
   (every requested month rendered; comparison table present in `--month`
   multi-month mode) and a cross-month comparison example table.
+- stdd-explore SKILL.md: added a "Step 8 — Before handoff" checklist that
+  verifies the six-phase method, question-budget discipline, rejected-options
+  capture, and next-phase handoff actually ran (the only stdd skill that
+  lacked a closing self-check; the others already gate via embedded
+  checklists or stdd-lint).
 
 ## v0.1.4 — 2026-07-21
 

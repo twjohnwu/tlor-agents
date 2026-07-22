@@ -142,6 +142,32 @@ asks you to, with exactly one standing exception:
 - If it's purely backend/CLI with no UI surface → propose calling
   `stdd-spec` directly.
 
+## Step 8 — Before handoff, run this checklist
+
+Before ending the explore session and handing off, tick each item — it
+guards the failure mode where a phase is silently skipped and no downstream
+gate catches it (stdd-spec's Step 0 only re-checks entry triage, not that
+explore's phases actually ran):
+
+- [ ] **Entry triage applied**: for a change's first entry, the Step 0
+      four-point check was run (or Step 0 was correctly skipped because a
+      `STDD/<name>/` dir already existed).
+- [ ] **Scope checked**: the Step 2 multi-subsystem check was done; if the
+      feature spanned more than one subsystem, the split was flagged before
+      any detail questions.
+- [ ] **Six phases visible**: the Step 3 phases 0-5 (Delete First →
+      Verification) are visible in the conversation, not performed silently.
+- [ ] **Question discipline held**: questions came in batches of ≤4 opened by
+      a restate-to-confirm; the ≤8 soft budget was not self-exceeded (only
+      the user granted any +4 extension).
+- [ ] **Options + recommendation**: Step 5 presented 2-3 tradeoff options with
+      a recommended one and its reasoning.
+- [ ] **Rejected options captured**: the considered-and-rejected list was
+      written to `## Rejected options` in spec.md, or folded into the handoff
+      summary for stdd-spec to write verbatim.
+- [ ] **Next phase named**: Step 7 recommended stdd-uiux (UI surface) or
+      stdd-spec (backend/CLI only).
+
 ## Notes for a fresh session
 
 - This skill never calls `stdd-plan` or `stdd-execute` itself, and never
