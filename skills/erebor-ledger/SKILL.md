@@ -176,6 +176,22 @@ Fable group per-role example:
 The Opus group's structure mirrors the table above exactly (same column
 order); its numbers are computed separately and not duplicated here.
 
+### Example — cross-month comparison (when `--month` is passed more than once)
+
+A multi-month run appends this `## Cross-month comparison` section AFTER
+every month's full per-role tables (Month A Fable → Month A Opus → Month B
+Fable → Month B Opus → this table). Columns are the raw `YYYY-MM` values you
+passed, one per month; the rows are fixed:
+
+| Metric | 2026-06 | 2026-07 |
+|---|---|---|
+| Sessions | 8 | 21 |
+| Dispatch count | 40 | 512 |
+| Actual cost | $2.10 | $28.40 |
+| Counterfactual cost | $9.80 | $92.15 |
+| Saved | $7.70 | $63.75 |
+| Saved % | 78.6% | 69.2% |
+
 Each group report also carries:
 
 - **Group summary**: session count, orchestrator's cumulative tokens/cost for
@@ -205,6 +221,27 @@ match a `claude-opus-4` price-table entry, not require an exact match).
   `model-prices.json`, not the script.
 - To add/repair a price, edit `references/model-prices.json` directly; do
   not hardcode prices in `erebor_ledger.py`.
+
+## Before you report — checklist
+
+Run through this before handing the report to the user; it guards the two
+failure modes that have actually happened — a requested month silently
+dropped, and a comparison run pasted without its comparison table:
+
+- [ ] **One run only**: the whole report is the quoted output of a single
+      script invocation (the run-once rule above); months were not stitched
+      together by hand.
+- [ ] **Every requested month is present**: for each month or date range the
+      user asked for, both its `Fable (<month>)` and `Opus (<month>)`
+      per-role tables appear, each in the mandatory column order.
+- [ ] **Comparison mode → comparison table**: if you passed `--month` more
+      than once, the `## Cross-month comparison` table is present after the
+      per-month sections, with one column per requested month.
+- [ ] **Disclosures intact**: the counterfactual-estimate line, the 5-minute
+      cache-tier line, and the `*` / `(upgrade)` / `(downgrade)` marker notes
+      are all still in the output — never trimmed to save space.
+- [ ] **No hand-recomputed numbers**: every figure in the prose matches the
+      quoted raw output character-for-character.
 
 ## Non-goals
 

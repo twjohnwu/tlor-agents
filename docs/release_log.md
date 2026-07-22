@@ -16,6 +16,9 @@ release first — new sections go at the top.
   skills table gains the `/westmarch-scribe` row.
 - README version badges switched from a hardcoded static badge (stuck at
   0.1.2) to a shields.io dynamic JSON badge reading plugin.json's version.
+- erebor-ledger SKILL.md: added a closing "Before you report" checklist
+  (every requested month rendered; comparison table present in `--month`
+  multi-month mode) and a cross-month comparison example table.
 
 ## v0.1.4 — 2026-07-21
 
