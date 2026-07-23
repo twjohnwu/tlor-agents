@@ -45,7 +45,13 @@ a deferred message and installs nothing).
 | `/stdd-plan` | Map 行軍圖 | Generates condition-based `design-be.md`/`design-fe.md`/`api.yml` and a scenario-covered `tasks.md` from an approved spec | Turning an approved spec into a design + task list |
 | `/stdd-execute` | Forge 鑄造 | Runs the per-task RED → GREEN → REFACTOR loop against an approved `tasks.md`, two-dispatch model with an independent verifier | Implementing STDD tasks one at a time |
 | `/stdd-lint` | Eagle Vision 鷹之視野 | Pure rule-based (non-model-judgment) mechanical checker: placeholder leakage, ID continuity, GWT completeness, test-mapping/coverage, fingerprint state | Called internally by stdd-spec/stdd-plan/stdd-execute's boundary checks, and directly by the user |
-| `/westmarch-scribe` | Westmarch 記事錄 | westmarch-scribe — decision capture: archives a filled compact-MADR decision to the project's decision log (or instruction file, or the general decisions log) | Invoked from stdd-explore/stdd-uiux/stdd-spec/stdd-plan's advisory closing step, or directly by the user |
+| `/westmarch-scribe` | Westmarch 記事錄 | westmarch-scribe — decision capture: archives a filled compact-MADR decision to the project's decision log (or instruction file, or the general decisions log) | Invoked from stdd-explore/stdd-uiux/stdd-spec/stdd-plan's advisory closing step, directly by the user, or proactively on decision-keywords in conversation |
+| `/minas-tirith-archivist` | Minas Tirith 檔案守護者 | minas-tirith-archivist — decision query: read-only counterpart to `/westmarch-scribe`; searches archived decision records (general and project-scoped) and answers with citations, never writes or edits | Asking about past decisions or why a convention exists, or directly by the user |
+
+Both `/westmarch-scribe` and `/minas-tirith-archivist` gate on the tlor rules
+layer being installed (`dispatch.md`/`judgment.md` present) — if not, they
+STOP with "tlor rules not installed — run `/tlor-init` first" rather than
+guessing a location to write or search.
 
 Pipeline order: `stdd-explore → stdd-uiux (conditional) → stdd-spec →
 stdd-plan → stdd-execute`, with `stdd` and `stdd-lint` callable at any point.

@@ -50,5 +50,7 @@ Cross-project decisions archived by `/westmarch-scribe` land here, newest
 first. Entry format: `### YYYY-MM-DD — <decision one-liner>`, followed by
 the filled compact MADR (or an equivalently complete record). This file
 accumulates on your machine and is never overwritten by plugin upgrades.
+The query executor for this log (and project-scoped decision logs) is the
+`/minas-tirith-archivist` skill, if installed.
 
 (no entries yet)

@@ -1,6 +1,6 @@
 ---
 name: westmarch-scribe
-description: 'Archives a DECIDED compact-MADR comparison (Decision / Decision Drivers / Considered Options / Pros and Cons / Decision Outcome) to the right durable location — the rules customize layer for a cross-project decision, or a project decision log / instruction file for a project-scoped one. Triggers: the user invokes `/westmarch-scribe`, says "archive this decision" or "把這個決策存起來", or a stdd phase skill''s closing advisory suggests archiving. Never fires automatically — it only runs when the user chooses to invoke it.'
+description: 'Use when a decision just got finalized or reversed in conversation and needs to be archived — the user says "就這樣定了", "決定用 X", "把這個決策存起來", "記錄這個決策", "archive this decision", "record this decision", "we''ve decided", explicit `/westmarch-scribe`, or a stdd phase skill''s closing advisory suggests archiving. Archives a DECIDED compact-MADR comparison (Decision / Decision Drivers / Considered Options / Pros and Cons / Decision Outcome) to the right durable location — the rules customize layer for a cross-project decision, or a project decision log / instruction file for a project-scoped one.'
 ---
 
 # Westmarch Scribe (西境紅皮書執筆者)
@@ -9,6 +9,12 @@ description: 'Archives a DECIDED compact-MADR comparison (Decision / Decision Dr
 > down what was decided, not what was debated. This skill only touches a
 > comparison once its Decision Outcome is filled in; an argument still in
 > progress has nothing yet for the scribe to record.
+
+This skill now retriggers proactively on the keywords in its description
+above, rather than waiting solely for explicit invocation — the
+`AskUserQuestion` forks throughout (Steps 1, 3, and 4) are what keep that
+proactivity safe, since every ambiguous or irreversible branch still stops
+for an explicit, closed-option confirmation before anything is written.
 
 ## Purpose
 
@@ -19,6 +25,19 @@ decisions) or the deciding project's own decision log or instruction file
 (project-scoped decisions). It never invents the archiving location by
 guessing; every ambiguous branch below is resolved by an `AskUserQuestion`
 with explicit options, never an open-ended prompt.
+
+## Step 0 — Gate: tlor rules installed?
+
+Resolve the installed rules directory (portable wording: `~/.claude/rules`,
+`.claude/rules`, or wherever this environment's rules layer actually lives —
+whether that's a symlink or a real directory; adapt to the installed
+layout). Confirm the base rule files `dispatch.md` and `judgment.md` exist
+there.
+
+If either is missing: **STOP**. Report exactly: "tlor rules not installed —
+run `/tlor-init` first". Do not silently continue — there is no durable
+location to archive into without the rules layer, and guessing one would
+misfile the record.
 
 ## Step 1 — Collect input
 
@@ -84,9 +103,18 @@ via `AskUserQuestion` with explicit options: **general (cross-project)** /
 
 ### 4a. General (cross-project) decision
 
-Append to the "General decisions log" section of the rules customize
-layer's `judgment.md` (portable wording — on this machine that's e.g.
-`~/.claude/rules/customize/judgment.md`; adapt the path to wherever the
+If the rules customize layer has no `judgment.md` yet, create it first,
+following the plugin seed's structure (`rules/customize/judgment.md` in this
+plugin bundle) as the shape to copy:
+
+- a header noting the file is user-owned and never overwritten by the
+  installer;
+- the compact-MADR candidate-comparison format section;
+- a "General decisions log" section.
+
+Only after the file exists (newly created or already present), append to its
+"General decisions log" section (portable wording — on this machine that's
+e.g. `~/.claude/rules/customize/judgment.md`; adapt the path to wherever the
 installed rules customize layer actually lives). Entry format:
 
 ```
